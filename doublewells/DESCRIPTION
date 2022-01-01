@@ -1,0 +1,9 @@
+Package: doublewells
+Type: Package
+Title: Simulate double-well systems
+Version: 0.1
+Date: 2021-10-26
+Author: Neil MacLaren
+Maintainer: Neil MacLaren <neil.g.maclaren@gmail.com>
+Description: Functions to simulate solitary and coupled double-well systems using the stochastic Euler method.
+License: MIT License
