@@ -1,3 +1,6 @@
-export("double_well", "double_well_coupled", "double_well_gao",
-       "complete", "feedback", "feedforward", "fromthemiddleout",
-       "linemotif", "tothemiddle")
+export(
+    "double_well", "double_well_coupled"
+  , "harvestmodel"
+  , "windowed_sdmethod", "windowed_lagmethod"
+  , "complete", "feedback", "feedforward", "fromthemiddleout", "linemotif", "tothemiddle"
+)

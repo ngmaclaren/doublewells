@@ -1,3 +1,6 @@
+## Code by Neil G. MacLaren, October, 2021
+## This file shows the effect of varying the connection strength parameter, D, on selected triads.
+
 library(igraph)
 library(doublewells)
 

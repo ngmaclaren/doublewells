@@ -68,21 +68,6 @@ double_well_gao(x, r1, r2, r3, D, A, beta_eff, dt)
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
-##---- Should be DIRECTLY executable !! ----
-##-- ==>  Define data, use random,
-##--	or do  help(data=index)  for the standard data sets.
-
-## The function is currently defined as
-function (x, r1, r2, r3, D, A, beta_eff, dt) 
-{
-    "Calculates the next step in a double well simulation assuming full determinism and Gao method coupling. Variables are as for `double_well`, with D as the coupling strength, `beta_eff` and `x_eff` summarize the degree distribution of the network in different ways."
-    x_eff <- mean(rowSums(A) * t(x))/mean(rowSums(A))
-    deltax <- (-(x - r1) * (x - r2) * (x - r3) + D * beta_eff * 
-        x_eff) * dt
-    nextx <- x + deltax
-    nextx
-  }
-}
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory (show via RShowDoc("KEYWORDS")):
 % \keyword{ ~kwd1 }

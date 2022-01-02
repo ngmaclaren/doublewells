@@ -1,3 +1,8 @@
+## Code by Neil G. MacLaren, October, 2021
+## This file shows the effect of varying the stress parameter, u, on selected triads.
+## Stress is added to only one node. Change the variable `stressto` to see the effect of adding stress
+## to different nodes.
+
 library(igraph)
 library(doublewells)
 
@@ -22,16 +27,20 @@ T <- 10000
 initialx <- rep(r1, 3)
 noise_level <- 10
 noise <- function(n, noise_level) rnorm(n = n, mean = 0, sd = noise_level)
-##Ds <- seq(.1, 1, by = .1)
 D <- .1
-##stresses <- seq(.1, 1, by = .1)
 stresses <- round(seq(.1, 2, length.out = 10), 2)
-## for x1
-##stress_matrix <- matrix(c(stresses, rep(0, 20)), ncol = 3, byrow = FALSE)
-## for x2
-##stress_matrix <- matrix(c(rep(0, 10), stresses, rep(0, 10)), ncol = 3, byrow = FALSE)
-## for x3
-stress_matrix <- matrix(c(rep(0, 20), stresses), ncol = 3, byrow = FALSE)
+
+stressto <- "x3"
+if(stressto == "x1") {
+    stress_matrix <- matrix(c(stresses, rep(0, 20)), ncol = 3, byrow = FALSE)
+    filename <- "./img/adding-stress-x1.pdf"
+} else if(stressto == "x2") {
+    stress_matrix <- matrix(c(rep(0, 10), stresses, rep(0, 10)), ncol = 3, byrow = FALSE)
+    filename <- "./img/adding-stress-x2.pdf"
+} else if(stressto == "x3") {
+    stress_matrix <- matrix(c(rep(0, 20), stresses), ncol = 3, byrow = FALSE)
+    filename <- "./img/adding-stress-x3.pdf"
+}
 
 results <- vector(mode = "list", length = length(matrices))
 names(results) <- names(matrices)
@@ -46,9 +55,7 @@ results <- lapply(
 for(i in 1:length(matrices)) {
     A <- matrices[[i]]
 
-    ##for(j in 1:length(Ds)) {
     for(j in 1:length(stresses)) {
-        ##D <- Ds[[j]]
         stress <- stress_matrix[j, ]
 
         x <- initialx
@@ -64,10 +71,8 @@ for(i in 1:length(matrices)) {
 ### Plotting
 pal <- rainbow(10)
 
-##dev.new(width = 20, height = 15)
-##pdf("./img/adding-stress-x1.pdf", width = 25, height = 15)
-##pdf("./img/adding-stress-x2.pdf", width = 20, height = 15)
-pdf("./img/adding-stress-x3.pdf", width = 20, height = 15)
+dev.new(width = 20, height = 15)
+##pdf(filename, width = 20, height = 15)
 
 nrows <- length(matrices)
 layoutmatrix <- matrix(
@@ -111,4 +116,4 @@ for(i in 1:nrows) {
         matlines(results[[i]][[j]], col = color, lwd = 2)
     }
 }
-dev.off()
+##dev.off()

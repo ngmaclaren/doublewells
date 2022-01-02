@@ -1,22 +1,5 @@
 library(doublewells)
 
-varmethod <- function(wl, results) {
-    windows <- matrix(
-        c(seq(1, length(results) - wl), seq(wl + 1, length(results))),
-        byrow = FALSE, ncol = 2
-    )
-    
-    sd_results <- apply(windows, 1, function(w) {
-        vec <- results[w[1]:w[2]]
-        vec.mean <- mean(vec)
-        resid <- vec - vec.mean
-        sd(resid)
-        ##sd(vec)
-    })
-
-    sd_results
-}
-
 ##set.seed(12345)
 
 A <- matrix(1, nrow = 3, ncol = 3)

@@ -62,8 +62,8 @@ double_well_coupled(x, r1, r2, r3, D, A, dt, noise = NULL, stress = rep(0, lengt
   This function implements the differential equation for the double-well
   system using the stochastic Euler method:
   
-  \[\Delta x_i = (-(x_i - r_1)(x_i - r_2)(x_i - r_3) + D \sum_{j=1}^n
-  Ax_j + u_i + \epsilon_i)\Delta t\]
+  \[Delta x_i = (-(x_i - r_1)(x_i - r_2)(x_i - r_3) + D \sum_{j=1}^n
+  Ax_j + u_i + e_i) Delta t\]
 
   The state variable is `x`; `r1`, `r2`, and `r3` are parameters; `D` is
   the coupling strength, assumed to be the same across the system; `A`

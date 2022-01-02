@@ -50,7 +50,7 @@ double_well(x, r1, r2, r3, dt, noise = NULL, stress = 0)
   This function implements the differential equation for the double-well
   system using the stochastic Euler method:
 
-  \[\Delta x = (-(x - r_1)(x - r_2)(x - r_3) + u + \epsilon)\Delta t\]
+  \[Delta x = (-(x - r_1)(x - r_2)(x - r_3) + u + e) Delta t\]
 
   The state variable is `x`; `r1`, `r2`, and `r3` are parameters; `u` is
   additive stress; and `\epsilon` is a noise term. For convenience, use
