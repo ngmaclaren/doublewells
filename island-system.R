@@ -1,3 +1,5 @@
+## Code by Neil G. MacLaren, Dec 30, 2021
+
 ## Simulation inspired by Drake & Griffen 2010
 ## Attempting a modular network
 ## Try:
