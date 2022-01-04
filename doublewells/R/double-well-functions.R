@@ -3,7 +3,7 @@ double_well <- function(x, r1, r2, r3, dt, noise = NULL, stress = 0) {
     if(is.null(noise)) {
         deltax <- (-(x - r1)*(x - r2)*(x - r3) + stress)*dt
     } else {
-        deltax <- (-(x - r1)*(x - r2)*(x - r3) + noise + stress)*dt
+        deltax <- (-(x - r1)*(x - r2)*(x - r3) + stress)*dt + noise 
     }
     
     nextx <- x + deltax
