@@ -31,12 +31,14 @@ double_well_gao <- function(x, r1, r2, r3, D, A, beta_eff, dt) {# beta_eff has t
     nextx
 }
 
-harvestmodel <- function(x, r, K, cp, h, dt, noise = NULL) {
-    "Calculates the next step in the harvest model system used by Dakos et al. (2012). Dakos et al. (2012) state that in a deterministic system the model should bifurcate at c = 2.604. Here, c = cp because c is a function in R."
-    if(is.null(noise)) {
-        diff <- ((r*x*(1 - (x/K))) - (cp*(x^2/(x^2 + h^2))))*dt
+harvestmodel <- function(x, r, K, cp, h, dt, s, noise = FALSE) {
+    "Calculates the next step in the harvest model system used by Dakos et al. (2012). Dakos et al. (2012) state that in a deterministic system the model should bifurcate at around c = 2.604. Here, c = cp because c is a function in R."
+    whitenoise <- function(s) rnorm(1, 0, s)
+    
+    if(noise) {
+        diff <- ((r*x*(1 - (x/K))) - (cp*(x^2/(x^2 + h^2))))*dt + whitenoise(s)
     } else {
-        diff <- ((r*x*(1 - (x/K))) - (cp*(x^2/(x^2 + h^2))))*dt + noise
+        diff <- ((r*x*(1 - (x/K))) - (cp*(x^2/(x^2 + h^2))))*dt
     }
 
     nextx <- x + diff

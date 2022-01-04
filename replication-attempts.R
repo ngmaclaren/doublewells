@@ -1,4 +1,5 @@
 library(doublewells)
+library(earlywarnings)
 
 noise <- function(s) rnorm(1, 0, s)
 
@@ -8,36 +9,41 @@ use <- "lagmethod" # "sdmethod"
 r <- 1
 h <- 1
 K <- 10
-s <- 0.01
-
+s <- 0.27#0.03
 ## Simulation parameters
-steplength <- 5000 # for the forcing on c
-cps <- seq(1, 2.65, length.out = 5) ## a sequence of "forcing" steps on the harvesting parameter
-T <- length(cps)*steplength
-dt <- .01
-wl <- floor(steplength/2) # for calculating the windowed versions of the early warning signals
-
+#steplength <- 5000 # for the forcing on c
+cps <- seq(1, 2.6771, length.out = 1000) ## a sequence of "forcing" steps on the harvesting parameter
+T <- length(cps)#*steplength
+dt <- 1
+wl <- floor(T/2)#floor(steplength/2) # for calculating the windowed versions of the early warning signals
 ## Simulation
 initialx <- 9
-nruns <- 10
+nruns <- 1
 results <- vector(mode = "list", length = nruns)
 results <- lapply(results, function(l) l <- numeric(T))
 for(i in 1:nruns) {
     p <- 1
     cp <- cps[p]
-
     x <- initialx
     for(t in 1:T) {
-        if(t %% steplength == 0 & t != T) {
-            p <- p + 1
-            cp <- cps[p]
-        }
-
+        ## if(t %% steplength == 0 & t != T) {
+        ##     p <- p + 1
+        ##     cp <- cps[p]
+        ## }
         results[[i]][[t]] <- x
-        x <- harvestmodel(x, r, K, cp, h, dt, noise(s))
+        x <- harvestmodel(x = x, r = r, K = K, cp = cp, h = h, dt = dt, s = s, noise = TRUE)
         if(x <= 0) x <- 0 ## seems like not the best solution
+        p <- p + 1
+        cp <- cps[p]
     }
 }
+gews <- generic_ews(results[[1]], detrending = "gaussian", bandwidth = 5)
+
+## for testing
+plot(NULL, xlab = "t", ylab = "x", xlim = c(0, T), ylim = c(0, 10))
+for(i in 1:nruns) lines(1:T, y = results[[i]], lwd = .5, col = pal[i])
+
+
 
 ## Calculate windowed early warning indicator
 if(use == "sdmethod") {
@@ -64,10 +70,10 @@ text(.5, .5, labels = "Harvest Model With Forcing on Grazing Rate (c), 10 trials
 
 par(mar = c(5.1, 4.1, 0, 2.1))
 plot(NULL, xlab = "t", ylab = "x", xlim = c(0, T), ylim = c(0, 10))
-steps <- seq(0, T - steplength, by = steplength)
-text(x = steps, y = 0, srt = 90,
-     labels = paste0("c = ", round(cps, 4)),
-     adj = c(0, .5), col = "black", cex = 1)
+## steps <- seq(0, T - steplength, by = steplength)
+## text(x = steps, y = 0, srt = 90,
+##      labels = paste0("c = ", round(cps, 4)),
+##      adj = c(0, .5), col = "black", cex = 1)
 for(i in 1:nruns) lines(1:T, y = results[[i]], lwd = .5, col = pal[i])
 
 
@@ -75,10 +81,10 @@ for(i in 1:nruns) lines(1:T, y = results[[i]], lwd = .5, col = pal[i])
 plot(NULL, xlim = c(0, T),
      ylim = c(min(unlist(ewresults))*.9, max(unlist(ewresults))*1.1),
      xlab = "t", ylab = "cor(x, lag(x))")
-text(##x = steps, y = 0, srt = 90,
-    x = steps, y = .8, srt = 90,
-    labels = paste0("c = ", round(cps, 4)),
-    adj = c(0, .5), col = "black", cex = 1)
+## text(##x = steps, y = 0, srt = 90,
+##     x = steps, y = .8, srt = 90,
+##     labels = paste0("c = ", round(cps, 4)),
+##     adj = c(0, .5), col = "black", cex = 1)
 if(use == "sdmethod") {
     for(i in 1:nruns) lines((wl+1):T, ewresults[[i]], lwd = .75, col = pal[i])
 } else if(use == "lagmethod") {
