@@ -11,22 +11,35 @@ T <- 1000
 
 initialx <- 1
 
-noise_level <- .01
+noise_level <- .5
 usteps <- T
                                         # same simulation method as Dakos et al (2012)
-U <- seq(0, .85, length.out = usteps)
+U <- seq(0, 1.1, length.out = usteps)
 
 results <- numeric(T)
-for(u in U) {
-    x <- initialx
+
+x <- initialx
     
-    for(t in 1:T) {
-        results[t] <- x
-        x <- double_well(x, r1, r2, r3, dt, noise(noise_level), u)
+for(t in 1:T) {
+    results[t] <- x
+    
+    u <- U[t]
+    x <- double_well(x, r1, r2, r3, dt, noise(noise_level), u)
+
+    if(x > 2.5) {
+        results <- results[1:t]
+        break
     }
+        
 }
 
-## These methods do not work in this system---at least not with Gaussian smoothing. Try the others.
-gews <- generic_ews(results, winsize = 25, detrending = "gaussian", bandwidth = 5)
-
-## Try the other package functions here. 
+gews <- generic_ews(
+    results,
+    winsize = 25,
+    ## detrending = "no",
+    detrending = "gaussian", # this seems most appropriate b/c I am adding Gaussian noise
+    ## detrending = "loess",
+    ## detrending = "linear",
+    ## detrending = "first-diff",
+    bandwidth = 5
+)
