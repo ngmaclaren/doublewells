@@ -38,6 +38,11 @@ for(i in 1:nruns) {
     for(t in 1:T) {
         results[[i]][[t]] <- x
         x <- harvestmodel(x = x, r = r, K = K, cp = cp, h = h, dt = dt, s = s, noise = TRUE)
+
+        if(x <= 0) {
+            results[[i]] <- results[[i]][1:t]
+            break
+        }
         
         p <- p + 1
         cp <- cps[p]
@@ -45,7 +50,7 @@ for(i in 1:nruns) {
 }
 
 if(nruns == 1) {
-    gews <- generic_ews(results[[1]], detrending = "gaussian", bandwidth = 5)
+    gews <- generic_ews(results[[1]], detrending = "gaussian", bandwidth = 5, powerspectrum = TRUE)
 } else {
     plot(NULL, xlab = "t", ylab = "x", xlim = c(0, T), ylim = c(0, 10))
     for(i in 1:nruns) lines(1:T, y = results[[i]], lwd = .5, col = pal[i])
