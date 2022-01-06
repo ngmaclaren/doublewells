@@ -4,7 +4,6 @@ double_well <- function(x, r1, r2, r3, dt, noise = NULL, stress = 0) {
         deltax <- (-(x - r1)*(x - r2)*(x - r3) + stress)*dt
     } else {
         deltax <- (-(x - r1)*(x - r2)*(x - r3) + stress)*dt + noise
-        ##deltax <- (-(x - r1)*(x - r2)*(x - r3))*dt + stress + noise 
     }
     
     nextx <- x + deltax
@@ -15,10 +14,9 @@ double_well_coupled <- function(x, r1, r2, r3, D, A, dt, noise = NULL, stress = 
     "Calculates the next step in a double well simulation assuming full determinism and network-based coupling. Variables are as for `double_well`, with `x` a row vector of current states, D as the coupling strength, and A as the adjacency matrix. The `noise` argument if not NULL should be a function that generates a vector of random values of length equal to the length of x."
     ## x is now a row vector
     if(is.null(noise)) {
-        deltax <- (-(x - r1)*(x - r2)*(x - r3) + D*colSums(A*x))*dt + stress
+        deltax <- (-(x - r1)*(x - r2)*(x - r3) + D*colSums(A*x) + stress)*dt
     } else {
         deltax <- (-(x - r1)*(x - r2)*(x - r3) + D*colSums(A*x) + stress)*dt + noise
-        ##deltax <- (-(x - r1)*(x - r2)*(x - r3) + D*colSums(A*x))*dt + stress + noise
     }
     
     nextx <- x + deltax
@@ -70,6 +68,19 @@ windowed_lagmethod <- function(results, wl, lag) {
     })
 
     lag_results
+}
+
+windowed_acmethod <- function(results, wl) {
+    "Calculate an early warning indicator in a single variable system using the coefficient of a lag = 1 autocorrelation model. Modified from Dakos et al. (2012)'s earlywarnings package."
+    ## no `mw` because I pass in a window length
+    nwindows <- length(results) - wl + 1
+    Results <- matrix(NA, nrow = wl, ncol = nwindows)
+    for(i in 1:nwindows) Results[, i] <- results[i:(i + wl - 1)]
+
+    acresults <- apply(Results, 2, function(x)
+        ar.ols(x, aic = FALSE, order.max = 1, dmean = FALSE, intercept = FALSE)$ar)
+
+    acresults
 }
 
 

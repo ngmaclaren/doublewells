@@ -4,18 +4,26 @@ library(doublewells)
 noise <- function(s) rnorm(1, 0, s)
 
 r1 <- 1
-r2 <- 2
+r2 <- 3
 r3 <- 5
 dt <- 0.01
-T <- 2000
+T <- 5000
+
+stopval <- if(r2 == 3) {
+               3 - (2/sqrt(3))
+           } else if(r2 == 4) {
+               (10 - sqrt(13))/3
+           } else if(r2 == 2) {
+               1.5 # get better value, but this is close
+           }
 
 initialx <- 1
 
-noise_level <- .001
+noise_level <- .005
 usteps <- T
 ##usteps <- T/2
                                         # same simulation method as Dakos et al (2012)
-U <- seq(0, 1.1, length.out = usteps)
+U <- seq(0, 10, length.out = usteps) # if r2 = 2, U 0:1.1
 ##U <- rep(seq(0, 1.1, length.out = usteps), each = 2)
 
 results <- numeric(T)
@@ -28,7 +36,7 @@ for(t in 1:T) {
     u <- U[t]
     x <- double_well(x, r1, r2, r3, dt, noise(noise_level), u)
 
-    if(x > 2) {
+    if(x > stopval) {
         results <- results[1:t]
         break
     }
@@ -47,8 +55,8 @@ for(t in 1:T) {
 gews <- generic_ews(
     results,
     winsize = 40,
-    ## detrending = "no",
-    detrending = "gaussian", # this seems most appropriate b/c I am adding Gaussian noise
+    detrending = "no",
+    ## detrending = "gaussian", # this seems most appropriate b/c I am adding Gaussian noise
     ## detrending = "loess",
     ## detrending = "linear",
     ## detrending = "first-diff",
