@@ -14,9 +14,9 @@ double_well_coupled <- function(x, r1, r2, r3, D, A, dt, noise = NULL, stress = 
     "Calculates the next step in a double well simulation assuming full determinism and network-based coupling. Variables are as for `double_well`, with `x` a row vector of current states, D as the coupling strength, and A as the adjacency matrix. The `noise` argument if not NULL should be a function that generates a vector of random values of length equal to the length of x."
     ## x is now a row vector
     if(is.null(noise)) {
-        deltax <- (-(x - r1)*(x - r2)*(x - r3) + D*colSums(A*x) + stress)*dt
+        deltax <- (-(x - r1)*(x - r2)*(x - r3) + D*colSums(A*x))*dt + stress
     } else {
-        deltax <- (-(x - r1)*(x - r2)*(x - r3) + D*colSums(A*x) + noise + stress)*dt
+        deltax <- (-(x - r1)*(x - r2)*(x - r3) + D*colSums(A*x))*dt + noise + stress
     }
     
     nextx <- x + deltax
