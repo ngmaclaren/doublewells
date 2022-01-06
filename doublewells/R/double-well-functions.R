@@ -3,7 +3,8 @@ double_well <- function(x, r1, r2, r3, dt, noise = NULL, stress = 0) {
     if(is.null(noise)) {
         deltax <- (-(x - r1)*(x - r2)*(x - r3) + stress)*dt
     } else {
-        deltax <- (-(x - r1)*(x - r2)*(x - r3) + stress)*dt + noise 
+        deltax <- (-(x - r1)*(x - r2)*(x - r3) + stress)*dt + noise
+        ##deltax <- (-(x - r1)*(x - r2)*(x - r3))*dt + stress + noise 
     }
     
     nextx <- x + deltax
@@ -16,17 +17,10 @@ double_well_coupled <- function(x, r1, r2, r3, D, A, dt, noise = NULL, stress = 
     if(is.null(noise)) {
         deltax <- (-(x - r1)*(x - r2)*(x - r3) + D*colSums(A*x))*dt + stress
     } else {
-        deltax <- (-(x - r1)*(x - r2)*(x - r3) + D*colSums(A*x))*dt + noise + stress
+        deltax <- (-(x - r1)*(x - r2)*(x - r3) + D*colSums(A*x) + stress)*dt + noise
+        ##deltax <- (-(x - r1)*(x - r2)*(x - r3) + D*colSums(A*x))*dt + stress + noise
     }
     
-    nextx <- x + deltax
-    nextx
-}
-
-double_well_gao <- function(x, r1, r2, r3, D, A, beta_eff, dt) {# beta_eff has to be calculated from A
-    "Calculates the next step in a double well simulation assuming full determinism and Gao method coupling. Variables are as for `double_well`, with D as the coupling strength, `beta_eff` and `x_eff` summarize the degree distribution of the network in different ways."
-    x_eff <- mean(rowSums(A)*t(x))/mean(rowSums(A))
-    deltax <- (-(x - r1)*(x - r2)*(x - r3) + D*beta_eff*x_eff)*dt
     nextx <- x + deltax
     nextx
 }
@@ -76,4 +70,13 @@ windowed_lagmethod <- function(results, wl, lag) {
     })
 
     lag_results
+}
+
+
+double_well_gao <- function(x, r1, r2, r3, D, A, beta_eff, dt) {# beta_eff has to be calculated from A
+    "Calculates the next step in a double well simulation assuming full determinism and Gao method coupling. Variables are as for `double_well`, with D as the coupling strength, `beta_eff` and `x_eff` summarize the degree distribution of the network in different ways."
+    x_eff <- mean(rowSums(A)*t(x))/mean(rowSums(A))
+    deltax <- (-(x - r1)*(x - r2)*(x - r3) + D*beta_eff*x_eff)*dt
+    nextx <- x + deltax
+    nextx
 }

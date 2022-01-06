@@ -18,8 +18,18 @@ library(doublewells)
 
 graph_choices <- c(
     "regular", "max-entropy", "sphere-surface", "islands", "pref-attach", "small-world")
-graph_choice <- graph_choices[3]
+graph_choice <- graph_choices[4]
+
 nnodes <- 100
+r1 <- 1 # lower equil
+r2 <- 2 # separatrix
+r3 <- 5 # upper equil
+s <- .01 # noise parameter
+D <- .06 # connection strength
+u <- .01  # stress parameter, add it to one node
+dt <- 0.01
+T <- 2000
+
 
 cprob <- .06 # target density approx .04; this needs to be balanced with D and probably u
 if(graph_choice == "max-entropy") {
@@ -55,15 +65,6 @@ if(graph_choice == "max-entropy") {
 
 A <- as_adj(g, type = "both", sparse = FALSE)
 
-r1 <- 1 # lower equil
-r2 <- 2 # separatrix
-r3 <- 5 # upper equil
-s <- .01 # noise parameter
-D <- .1 # connection strength
-u <- .01  # stress parameter, add it to one node
-dt <- 0.01
-T <- 2000
-
 initialx <- rep(1, nnodes)
 stress <- rep(0, nnodes)
 stressnode <- sample(1:nnodes, 1)
@@ -85,7 +86,7 @@ nodecolor <- colorfun(V(g)$nodestate)
 V(g)$color <- apply(nodecolor, 1, function(x) rgb(t(x), maxColorValue = 255))
 ##nodecolor <- ifelse(stress == 0, "orange", "dodgerblue")
 nodesize <- ifelse(stress == 0, 3, 9)
-linewidth <- ifelse(stress == 0, .2, 1)
+linewidth <- ifelse(stress == 0, .2, 2)
 plot(g, vertex.label = "",  main = main,
      vertex.size = nodesize
      ##vertex.color = nodecolor
