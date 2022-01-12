@@ -41,16 +41,16 @@ graph_choices <- c(# comments are approximate critical values of D with u = 0
     "small-world" # 0.24
 )
 
-graph_choice <- graph_choices[3]
+graph_choice <- graph_choices[1]
 calc_earlywarnings <- FALSE # TRUE
-add_stress_to <- "highest" # one of "highest", "high", "low", "lowest", or NULL
-linear_increase <- FALSE # TRUE, FALSE, or NULL (for no increase)
+add_stress_to <- NULL # one of "highest", "high", "low", "lowest", or NULL
+linear_increase <- TRUE # TRUE, FALSE, or NULL (for no increase)
 
 nnodes <- 100
 r1 <- 1 # lower equil
 r2 <- 3 # separatrix
 r3 <- 5 # upper equil
-s <- 0#.005 # noise parameter
+s <- 0.005 # noise parameter
 D <- NULL # connection strength; can set here or let the code below set the value to just below the approximate critical threshold for each graph type.
 maxU <- NULL # stress/bias; same as for D
 dt <- 0.01
@@ -162,3 +162,19 @@ if(calc_earlywarnings) {
 }
 
 print(paste0("Degree of stress node is ", degree(g, V(g)[stressnode])))
+
+
+windows <- matrix(c(seq(1, T-99), seq(100, T)), ncol = 2)
+evs <- apply(windows, 1, function(x) {
+    y <- results[x[1]:x[2], ]
+    ev <- sort(eigen(y, only.values = TRUE)$values, decreasing = TRUE)[1]
+    sqrt(ev)})
+
+
+
+mi <- apply(results[2:T, ], 1, function(x) ape::Moran.I(x, A, scaled = TRUE)$observed)
+
+dev.new(width = 10, height = 5)
+par(mfrow = c(1, 2))
+plot(windows[, 2], evs, type = "l", xlab = "t", ylab = "Dominant Eigenvalue of var(x)")
+plot(2:T, mi, type = "l")
