@@ -148,7 +148,7 @@ for(net in 1:nnets) {
     allstressnodes[[net]] <- stressnodes
 }
 
-## Now here I want an eight-paneled figure, the panels of which will be the matplots like below
+## Now here I want a paneled figure, the panels of which will be the matplots like below
 dev.new(height = 15, width = 20)
 par(mfrow = c(nnets, ntrials))
 for(net in 1:nnets) {
