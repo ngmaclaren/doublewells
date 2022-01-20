@@ -50,7 +50,8 @@ for(i in 1:nruns) {
 }
 
 if(nruns == 1) {
-    gews <- generic_ews(results[[1]], detrending = "gaussian", bandwidth = 5, powerspectrum = TRUE)
+    ##gews <- generic_ews(results[[1]], detrending = "gaussian", bandwidth = 5)#, powerspectrum = TRUE)
+    gews <- generic_ews(results[[1]], detrending = "no")
 } else {
     plot(NULL, xlab = "t", ylab = "x", xlim = c(0, T), ylim = c(0, 10))
     for(i in 1:nruns) lines(1:T, y = results[[i]], lwd = .5, col = pal[i])

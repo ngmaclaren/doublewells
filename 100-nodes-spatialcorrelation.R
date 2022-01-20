@@ -1,4 +1,5 @@
-## Code by Neil G. MacLaren, 6 Jan 2021
+## Core code by Neil G. MacLaren, 6 Jan 2021
+## Updated throughout Jan 2022
 
 library(igraph)
 library(doublewells)
@@ -32,6 +33,51 @@ noise <- function(n, s, f = rnorm) {
     f(n, 0, s)
 }
 
+## time_average <- function(x, t = NULL, times = NULL) {
+##     ## X is a variable, times is a vector of times at which to measure x_{i, t}
+##     ## give either t or times
+##     stopifnot(length(t) == 1 | length(times) > 1)
+##     if(length(times) == 0) times <- seq(t - 6, t - 1)
+    
+##     avg <- mean(x[times]) 
+##     avg
+## }
+
+## delta_xi <- function(x, t, times = NULL) {
+##     stopifnot(length(t) == 1 | length(times) > 1)
+##     if(length(times) == 0) times <- seq(t - 6, t - 1)
+
+##     Δx_i <- x[t] - time_average(x[t], t)
+##     Δx_i
+## }
+
+Iadj <- function(X, A, t = NULL, nsteps = NULL, times = NULL) {
+    ## A is a 2D array of connection weights (all w_ij = 1 for now)
+    ## t is the chosen time
+    ## X is more challenging. It should be a 2D array where the rows are t_t and the columns are x_i
+    stopifnot((length(t) == 1 & length(nsteps) == 1) | length(times) > 1)
+    if(length(times) == 0) times <- seq(t - nsteps + 1, t)
+
+    X <- X[times, ]
+    N <- nrow(A)
+    W <- sum(A)
+
+    muI <- colMeans(X)
+    deltaX <- apply(X, 2, function(x) x[nsteps] - mean(x[1:nsteps]))
+    
+    numerator <- 0
+    for(i in 1:nrow(A)) {
+        for(j in 1:ncol(A)) {
+            y <- A[i, j]*deltaX[i]*deltaX[j]
+            numerator <- numerator + y
+        }
+    }
+    denomenator <- sum((X[nsteps, ] - muI)^2)
+
+    newI <- (N/W)*(numerator/denomenator)
+    newI
+}
+
 graph_choices <- c(# comments are approximate critical values of D with u = 0
     "regular", # 0.298
     "max-entropy", # 0.185
@@ -48,9 +94,9 @@ linear_increase <- TRUE # TRUE, FALSE, or NULL (for no increase)
 
 nnodes <- 100
 r1 <- 1 # lower equil
-r2 <- 3 # separatrix
-r3 <- 5 # upper equil
-s <- 0.005 # noise parameter
+r2 <- 4 # separatrix
+r3 <- 7 # upper equil
+s <- 0.01 # noise parameter
 D <- NULL # connection strength; can set here or let the code below set the value to just below the approximate critical threshold for each graph type.
 maxU <- NULL # stress/bias; same as for D
 dt <- 0.01
@@ -60,23 +106,23 @@ T <- 5000
 ## this needs to be balanced with D and u, as well as the small world and random regular networks, which are limited in possible values for density
 cprob <- .06
 if(graph_choice == "regular") {
-    if(is.null(D)) D <- 0.29
-    if(is.null(maxU)) maxU <- 0.7
+    if(is.null(D)) D <- 0.84
+    if(is.null(maxU)) maxU <- 1.4
     g <- sample_k_regular(nnodes, 6)
     main <- "Random Regular"
 } else if(graph_choice == "max-entropy") {
-    if(is.null(D)) D <- 0.18
-    if(is.null(maxU)) maxU <- 2
+    if(is.null(D)) D <- 0.54
+    if(is.null(maxU)) maxU <- 2.7
     g <- sample_gnp(nnodes, cprob)
     main <- "Maximum Entropy"
 } else if(graph_choice == "sphere-surface") {
-    if(is.null(D)) D <- 0.17
-    if(is.null(maxU)) maxU <- 2.5
+    if(is.null(D)) D <- 0.56
+    if(is.null(maxU)) maxU <- 2.4
     g <- sample_dot_product(sample_sphere_surface(dim = 3, n = nnodes, radius = .279)) # .35 is ~ .1
     main <- "Sphere Surface/Dot-Product"
 } else if(graph_choice == "islands") {
-    if(is.null(D)) D <- 0.18
-    if(is.null(maxU)) maxU <- 2.5
+    if(is.null(D)) D <- 0.58
+    if(is.null(maxU)) maxU <- 4.5
     nislands <- 5
     nbridges <- 1
     base_prob <- cprob*nislands
@@ -85,15 +131,15 @@ if(graph_choice == "regular") {
                         islands.pin = pin, n.inter = nbridges)
     main <- "`Islands'"
 } else if(graph_choice == "pref-attach") {
-    if(is.null(D)) D <- 0.06
-    if(is.null(maxU)) maxU <- 2.5
+    if(is.null(D)) D <- 0.18
+    if(is.null(maxU)) maxU <- 10.5
     ## this may not add to one. Parameters are balanced by hand to achieve tgt density of .04
     outdist <- c(0, .6, .5, .4, .3, .2, .1, .05)
     g <- sample_pa(nnodes, power = 1.5, out.dist = outdist, directed = FALSE)
     main <- "Preferential Attachment"
 } else if(graph_choice == "small-world") {
-    if(is.null(D)) D <- 0.23
-    if(is.null(maxU)) maxU <- 2.5
+    if(is.null(D)) D <- 0.73
+    if(is.null(maxU)) maxU <- 2.7
     ## not fine enough control over density
     g <- sample_smallworld(dim = 1, size = 100, nei = 3, p = .1)
     main <- "Small World"
@@ -166,4 +212,15 @@ print(paste0("Degree of stress node is ", degree(g, V(g)[stressnode])))
 ##ape::Moran.I(results[nrow(results), ], A, scaled = TRUE)$observed
 mi <- apply(results[2:T, ], 1, function(x) ape::Moran.I(x, A, scaled = TRUE)$observed)
 dev.new()
-plot(2:T, mi, type = "l")
+plot(2:T, mi, type = "l", main = "I", xlab = "t", ylab = "I")
+
+nsteps <- 5
+ts <- seq(nsteps + 1, T)
+miadj <- sapply(ts, function(t) Iadj(results, A, t = t, nsteps = nsteps))
+dev.new()
+plot(ts, miadj, type = "l", main = "I'", xlab = "t", ylab = "I'")
+
+dev.new()
+lwds <- ifelse(1:100 %in% nbs, 2, .5)
+ltys <- ifelse(1:100 %in% nbs, 2, 1)
+matplot(1:T, results, type = "l", lty = ltys, lwd = lwds, col = "black")

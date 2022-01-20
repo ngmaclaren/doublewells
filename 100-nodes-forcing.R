@@ -1,5 +1,8 @@
 ## Code by Neil G. MacLaren, 6 Jan 2021
 
+## 14 Jan]
+## Prior notes are in the .org file. Coming back to this file to explore a different set of parameters, r = (1, 4, 7)
+
 library(igraph)
 library(doublewells)
 
@@ -41,16 +44,16 @@ graph_choices <- c(# comments are approximate critical values of D with u = 0
     "small-world" # 0.24
 )
 
-graph_choice <- graph_choices[1]
+graph_choice <- graph_choices[6]
 calc_earlywarnings <- FALSE # TRUE
 add_stress_to <- NULL # one of "highest", "high", "low", "lowest", or NULL
 linear_increase <- TRUE # TRUE, FALSE, or NULL (for no increase)
 
 nnodes <- 100
 r1 <- 1 # lower equil
-r2 <- 3 # separatrix
-r3 <- 5 # upper equil
-s <- 0.005 # noise parameter
+r2 <- 4 # separatrix
+r3 <- 7 # upper equil
+s <- 0.01 # noise parameter
 D <- NULL # connection strength; can set here or let the code below set the value to just below the approximate critical threshold for each graph type.
 maxU <- NULL # stress/bias; same as for D
 dt <- 0.01
@@ -60,23 +63,23 @@ T <- 5000
 ## this needs to be balanced with D and u, as well as the small world and random regular networks, which are limited in possible values for density
 cprob <- .06
 if(graph_choice == "regular") {
-    if(is.null(D)) D <- 0.29
-    if(is.null(maxU)) maxU <- 0.7
+    if(is.null(D)) D <- 0.84
+    if(is.null(maxU)) maxU <- 1.4
     g <- sample_k_regular(nnodes, 6)
     main <- "Random Regular"
 } else if(graph_choice == "max-entropy") {
-    if(is.null(D)) D <- 0.18
-    if(is.null(maxU)) maxU <- 2
+    if(is.null(D)) D <- 0.56
+    if(is.null(maxU)) maxU <- 2.3
     g <- sample_gnp(nnodes, cprob)
     main <- "Maximum Entropy"
 } else if(graph_choice == "sphere-surface") {
-    if(is.null(D)) D <- 0.17
-    if(is.null(maxU)) maxU <- 2.5
+    if(is.null(D)) D <- 0.56
+    if(is.null(maxU)) maxU <- 2.4
     g <- sample_dot_product(sample_sphere_surface(dim = 3, n = nnodes, radius = .279)) # .35 is ~ .1
     main <- "Sphere Surface/Dot-Product"
 } else if(graph_choice == "islands") {
-    if(is.null(D)) D <- 0.18
-    if(is.null(maxU)) maxU <- 2.5
+    if(is.null(D)) D <- 0.58
+    if(is.null(maxU)) maxU <- 4.5
     nislands <- 5
     nbridges <- 1
     base_prob <- cprob*nislands
@@ -85,15 +88,15 @@ if(graph_choice == "regular") {
                         islands.pin = pin, n.inter = nbridges)
     main <- "`Islands'"
 } else if(graph_choice == "pref-attach") {
-    if(is.null(D)) D <- 0.06
-    if(is.null(maxU)) maxU <- 2.5
+    if(is.null(D)) D <- 0.18
+    if(is.null(maxU)) maxU <- 10.5
     ## this may not add to one. Parameters are balanced by hand to achieve tgt density of .04
     outdist <- c(0, .6, .5, .4, .3, .2, .1, .05)
     g <- sample_pa(nnodes, power = 1.5, out.dist = outdist, directed = FALSE)
     main <- "Preferential Attachment"
 } else if(graph_choice == "small-world") {
-    if(is.null(D)) D <- 0.23
-    if(is.null(maxU)) maxU <- 2.5
+    if(is.null(D)) D <- 0.73
+    if(is.null(maxU)) maxU <- 2.7
     ## not fine enough control over density
     g <- sample_smallworld(dim = 1, size = 100, nei = 3, p = .1)
     main <- "Small World"
@@ -161,20 +164,20 @@ if(calc_earlywarnings) {
     )
 }
 
-print(paste0("Degree of stress node is ", degree(g, V(g)[stressnode])))
+## print(paste0("Degree of stress node is ", degree(g, V(g)[stressnode])))
 
 
-windows <- matrix(c(seq(1, T-99), seq(100, T)), ncol = 2)
-evs <- apply(windows, 1, function(x) {
-    y <- results[x[1]:x[2], ]
-    ev <- sort(eigen(y, only.values = TRUE)$values, decreasing = TRUE)[1]
-    sqrt(ev)})
+## windows <- matrix(c(seq(1, T-99), seq(100, T)), ncol = 2)
+## evs <- apply(windows, 1, function(x) {
+##     y <- results[x[1]:x[2], ]
+##     ev <- sort(eigen(y, only.values = TRUE)$values, decreasing = TRUE)[1]
+##     sqrt(ev)})
 
 
 
-mi <- apply(results[2:T, ], 1, function(x) ape::Moran.I(x, A, scaled = TRUE)$observed)
+## mi <- apply(results[2:T, ], 1, function(x) ape::Moran.I(x, A, scaled = TRUE)$observed)
 
-dev.new(width = 10, height = 5)
-par(mfrow = c(1, 2))
-plot(windows[, 2], evs, type = "l", xlab = "t", ylab = "Dominant Eigenvalue of var(x)")
-plot(2:T, mi, type = "l")
+## dev.new(width = 10, height = 5)
+## par(mfrow = c(1, 2))
+## plot(windows[, 2], evs, type = "l", xlab = "t", ylab = "Dominant Eigenvalue of var(x)")
+## plot(2:T, mi, type = "l")
