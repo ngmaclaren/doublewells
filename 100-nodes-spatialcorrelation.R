@@ -52,9 +52,9 @@ noise <- function(n, s, f = rnorm) {
 ## }
 
 Iadj <- function(X, A, t = NULL, nsteps = NULL, times = NULL) {
-    ## A is a 2D array of connection weights (all w_ij = 1 for now)
+    ## A is a 2D array of connection weights (all w_ij ∈ {0, 1} for now)
     ## t is the chosen time
-    ## X is more challenging. It should be a 2D array where the rows are t_t and the columns are x_i
+    ## X is a 2D array where the rows are t_t and the columns are x_i
     stopifnot((length(t) == 1 & length(nsteps) == 1) | length(times) > 1)
     if(length(times) == 0) times <- seq(t - nsteps + 1, t)
 
@@ -63,16 +63,20 @@ Iadj <- function(X, A, t = NULL, nsteps = NULL, times = NULL) {
     W <- sum(A)
 
     muI <- colMeans(X)
-    deltaX <- apply(X, 2, function(x) x[nsteps] - mean(x[1:nsteps]))
+    deltaX <- apply(X, 2, function(x) x[nsteps] - mean(x)) # [1:nsteps]
+
+    ## DX <- outer(deltaX, deltaX)
+    ## numerator <- sum(A*DX)
     
     numerator <- 0
     for(i in 1:nrow(A)) {
         for(j in 1:ncol(A)) {
+            if(j >= i) next
             y <- A[i, j]*deltaX[i]*deltaX[j]
             numerator <- numerator + y
         }
     }
-    denomenator <- sum((X[nsteps, ] - muI)^2)
+    denomenator <- sum((X[nrow(X), ] - muI)^2)
 
     newI <- (N/W)*(numerator/denomenator)
     newI
@@ -207,20 +211,96 @@ if(calc_earlywarnings) {
     )
 }
 
-print(paste0("Degree of stress node is ", degree(g, V(g)[stressnode])))
+## print(paste0("Degree of stress node is ", degree(g, V(g)[stressnode])))
 
-##ape::Moran.I(results[nrow(results), ], A, scaled = TRUE)$observed
-mi <- apply(results[2:T, ], 1, function(x) ape::Moran.I(x, A, scaled = TRUE)$observed)
-dev.new()
-plot(2:T, mi, type = "l", main = "I", xlab = "t", ylab = "I")
+## ##ape::Moran.I(results[nrow(results), ], A, scaled = TRUE)$observed
+## mi <- apply(results[2:T, ], 1, function(x) ape::Moran.I(x, A, scaled = TRUE)$observed)
+## dev.new()
+## plot(2:T, mi, type = "l", main = "I", xlab = "t", ylab = "I")
 
+## ## This is I' applied across the network.
+## nsteps <- 5
+## ts <- seq(nsteps + 1, T)
+## miadj <- sapply(ts, function(t) Iadj(results, A, t = t, nsteps = nsteps))
+## dev.new()
+## plot(ts, miadj, type = "l", main = "I'", xlab = "t", ylab = "I'")
+
+## dev.new()
+## lwds <- ifelse(1:100 %in% nbs, 2, .5)
+## ltys <- ifelse(1:100 %in% nbs, 2, 1)
+## matplot(1:T, results, type = "l", lty = ltys, lwd = lwds, col = "black")
+
+## I want I' applied only to the neighbors of stressnode
+
+## stressnode_ew <- earlywarnings::generic_ews(results[results[, stressnode] < 2.5, stressnode],
+##                                             winsize = 50, detrending = "no")
+
+##nbs <- neighborhood(g, order = 2, nodes = stressnode)[[1]]
+
+dev.new(width = 18, height = 12); par(mfrow = c(2, 3))
+
+## 1
+V(g)$nodestate <- x/max(x)
+colorfun <- colorRamp(c("blue", "orange"), space = "Lab")
+nodecolor <- colorfun(V(g)$nodestate)
+V(g)$color <- apply(nodecolor, 1, function(x) rgb(t(x), maxColorValue = 255))
+nodesize <- ifelse(stress == 0, 4, 8)
+linewidth <- ifelse(stress == 0, .2, 2)
+plot(
+    g, vertex.label = "",  main = main,
+    vertex.size = nodesize
+)
+
+## 2
+matplot(
+    1:T, results, type = "l",
+    lty = 1,
+    lwd = linewidth,
+    col = V(g)$color,
+    xlab = "t", ylab = expression(x[i]), main = "Node States"
+)
+
+## 3
+ts <- 2:T
+mi <- apply(results[ts, ], 1, function(x) ape::Moran.I(x, A, scaled = TRUE)$observed)
+plot(ts, mi, type = "l", main = "Network I (Original)", xlab = "t", ylab = "I",
+     col = "darkgray", lwd = .5)
+smooth <- loess(mi ~ ts, span = .1)
+smoothed <- predict(smooth)
+lines(ts, smoothed, col = "blue", lwd = 2, lty = 2)
+
+## 4
 nsteps <- 5
-ts <- seq(nsteps + 1, T)
+##offset <- 50
+ts <- seq(nsteps + 1, T)#seq(offset + 1, T)
 miadj <- sapply(ts, function(t) Iadj(results, A, t = t, nsteps = nsteps))
-dev.new()
-plot(ts, miadj, type = "l", main = "I'", xlab = "t", ylab = "I'")
+##miadj <- sapply(ts, function(t) Iadj(results, A, times = seq(t - offset, t, by = 10)))##t = t, nsteps = nsteps))
+##par(mfrow = c(1, 3))
+plot(ts, miadj, type = "l", main = "Network I'", xlab = "t", ylab = "I'", col = "gray", lwd = .5)
+smooth <- loess(miadj ~ ts, span = .1)
+smoothed <- predict(smooth)
+lines(ts, smoothed, col = "red", lwd = 2, lty = 2)
 
-dev.new()
-lwds <- ifelse(1:100 %in% nbs, 2, .5)
-ltys <- ifelse(1:100 %in% nbs, 2, 1)
-matplot(1:T, results, type = "l", lty = ltys, lwd = lwds, col = "black")
+## 5
+nbs <- neighbors(g, stressnode)
+miadj <- sapply(ts, function(t) Iadj(results[, nbs], A[nbs, nbs], t = t, nsteps = nsteps))
+plot(ts, miadj, type = "l", main = "Neighbors I'", xlab = "t", ylab = "I'", col = "gray", lwd = .5)
+smooth <- loess(miadj ~ ts, span = .1)
+smoothed <- predict(smooth)
+lines(ts, smoothed, col = "red", lwd = 2, lty = 2)
+
+## 6
+nbhd <- neighborhood(g, order = 1, nodes = stressnode)[[1]]
+miadj <- sapply(ts, function(t) Iadj(results[, nbhd], A[nbhd, nbhd], t = t, nsteps = nsteps))
+plot(ts, miadj, type = "l", main = "Neighborhood I'", xlab = "t", ylab = "I'", col = "gray", lwd = .5)
+smooth <- loess(miadj ~ ts, span = .1)
+smoothed <- predict(smooth)
+lines(ts, smoothed, col = "red", lwd = 2, lty = 2)
+
+for(v in nbhd) {
+    ew <- earlywarnings::generic_ews(results[results[, v] < 2.5, v],
+                                      winsize = 50, detrending = "no")
+}
+## anb <- sample(nbs, 1)
+## aneighbor_ew <-  earlywarnings::generic_ews(results[results[, anb] < 2.5, anb],
+##                                             winsize = 50, detrending = "no")
