@@ -33,24 +33,6 @@ noise <- function(n, s, f = rnorm) {
     f(n, 0, s)
 }
 
-## time_average <- function(x, t = NULL, times = NULL) {
-##     ## X is a variable, times is a vector of times at which to measure x_{i, t}
-##     ## give either t or times
-##     stopifnot(length(t) == 1 | length(times) > 1)
-##     if(length(times) == 0) times <- seq(t - 6, t - 1)
-    
-##     avg <- mean(x[times]) 
-##     avg
-## }
-
-## delta_xi <- function(x, t, times = NULL) {
-##     stopifnot(length(t) == 1 | length(times) > 1)
-##     if(length(times) == 0) times <- seq(t - 6, t - 1)
-
-##     Δx_i <- x[t] - time_average(x[t], t)
-##     Δx_i
-## }
-
 Iadj <- function(X, A, t = NULL, nsteps = NULL, times = NULL) {
     ## A is a 2D array of connection weights (all w_ij ∈ {0, 1} for now)
     ## t is the chosen time
@@ -63,10 +45,7 @@ Iadj <- function(X, A, t = NULL, nsteps = NULL, times = NULL) {
     W <- sum(A)
 
     muI <- colMeans(X)
-    deltaX <- apply(X, 2, function(x) x[nsteps] - mean(x)) # [1:nsteps]
-
-    ## DX <- outer(deltaX, deltaX)
-    ## numerator <- sum(A*DX)
+    deltaX <- apply(X, 2, function(x) x[nsteps] - mean(x))
     
     numerator <- 0
     for(i in 1:nrow(A)) {
@@ -78,23 +57,24 @@ Iadj <- function(X, A, t = NULL, nsteps = NULL, times = NULL) {
     }
     denomenator <- sum((X[nrow(X), ] - muI)^2)
 
-    newI <- (N/W)*(numerator/denomenator)
-    newI
+    (N/W)*(numerator/denomenator)
 }
 
-graph_choices <- c(# comments are approximate critical values of D with u = 0
-    "regular", # 0.298
-    "max-entropy", # 0.185
-    "sphere-surface", # 0.18
-    "islands", # 0.194
-    "pref-attach", # 0.067
-    "small-world" # 0.24
+graph_choices <- c(
+    "regular",
+    "max-entropy",
+    "sphere-surface",
+    "islands",
+    "pref-attach",
+    "small-world"
 )
 
-graph_choice <- graph_choices[2]
+graph_choice <- graph_choices[5]
 calc_earlywarnings <- FALSE # TRUE
 add_stress_to <- "highest" # one of "highest", "high", "low", "lowest", or NULL
 linear_increase <- TRUE # TRUE, FALSE, or NULL (for no increase)
+increase_D <- FALSE
+increase_u <- TRUE
 
 cutoff_value <- 2 # ideally this would be the "point of no return" value
 plot_transition <- TRUE
@@ -104,8 +84,8 @@ r1 <- 1 # lower equil
 r2 <- 4 # separatrix
 r3 <- 7 # upper equil
 s <- 0.01 # noise parameter
-D <- NULL # connection strength; can set here or let the code below set the value to just below the approximate critical threshold for each graph type.
-maxU <- NULL # stress/bias; same as for D
+maxD <- NULL # connection strength; can set here or let the code below set the value to just below the approximate critical threshold for each graph type.
+maxU <- NULL # stress/bias; same as for maxD
 dt <- 0.01
 T <- 5000
  
@@ -113,22 +93,22 @@ T <- 5000
 ## this needs to be balanced with D and u, as well as the small world and random regular networks, which are limited in possible values for density
 cprob <- .06
 if(graph_choice == "regular") {
-    if(is.null(D)) D <- 0.84
+    if(is.null(maxD)) maxD <- 0.9#0.84
     if(is.null(maxU)) maxU <- 1.4
     g <- sample_k_regular(nnodes, 6)
     main <- "Random Regular"
 } else if(graph_choice == "max-entropy") {
-    if(is.null(D)) D <- 0.54
+    if(is.null(maxD)) maxD <- 0.66#0.54
     if(is.null(maxU)) maxU <- 2.7
     g <- sample_gnp(nnodes, cprob)
     main <- "Maximum Entropy"
 } else if(graph_choice == "sphere-surface") {
-    if(is.null(D)) D <- 0.56
-    if(is.null(maxU)) maxU <- 2.4
+    if(is.null(maxD)) maxD <- 0.63#0.56
+    if(is.null(maxU)) maxU <- 2.5
     g <- sample_dot_product(sample_sphere_surface(dim = 3, n = nnodes, radius = .279)) # .35 is ~ .1
     main <- "Sphere Surface/Dot-Product"
 } else if(graph_choice == "islands") {
-    if(is.null(D)) D <- 0.58
+    if(is.null(maxD)) maxD <- 0.68#0.58
     if(is.null(maxU)) maxU <- 4.5
     nislands <- 5
     nbridges <- 1
@@ -136,21 +116,23 @@ if(graph_choice == "regular") {
     pin <- base_prob * (100 - nbridges)/100
     g <- sample_islands(islands.n = nislands, islands.size = nnodes/nislands,
                         islands.pin = pin, n.inter = nbridges)
-    main <- "`Islands'"
+    main <- "'Islands'"
 } else if(graph_choice == "pref-attach") {
-    if(is.null(D)) D <- 0.18
+    if(is.null(maxD)) maxD <- 0.35#0.18
     if(is.null(maxU)) maxU <- 10.5
     ## this may not add to one. Parameters are balanced by hand to achieve tgt density of .04
     outdist <- c(0, .6, .5, .4, .3, .2, .1, .05)
     g <- sample_pa(nnodes, power = 1.5, out.dist = outdist, directed = FALSE)
     main <- "Preferential Attachment"
 } else if(graph_choice == "small-world") {
-    if(is.null(D)) D <- 0.73
+    if(is.null(maxD)) maxD <- 0.8#0.73
     if(is.null(maxU)) maxU <- 2.7
     ## not fine enough control over density
     g <- sample_smallworld(dim = 1, size = 100, nei = 3, p = .1)
     main <- "Small World"
 }
+
+A <- as_adj(g, type = "both", sparse = FALSE)
 
 ## For setting the increase in u
 if(is.null(linear_increase)) {# for completeness, when forcing on u is not desired
@@ -163,46 +145,58 @@ if(is.null(linear_increase)) {# for completeness, when forcing on u is not desir
     U <- c(rep(0, (T - usteps)/2), seq(0, maxU, length.out = usteps), rep(maxU, (T - usteps)/2))
 }
 
-A <- as_adj(g, type = "both", sparse = FALSE)
+if(increase_D) {
+    Ds <- seq(0, maxD, length.out = T)
+} else {
+    D <- maxD*.85 # .8 for ME, .85 for sph-s and islands, 
+}
 
 stress <- rep(0, nnodes)
-stressnode <- select_stressnode(g, add_stress_to = add_stress_to) # "lowdegree")
+if(increase_u) {
+    stressnode <- select_stressnode(g, add_stress_to = add_stress_to) # "lowdegree")
+}
 
 initialx <- rep(1, nnodes)
 results <- matrix(0, nrow = T, ncol = nnodes)
 x <- initialx
 for(t in 1:T) {
     results[t, ] <- x
-    
-    stress[stressnode] <- U[t] # u
+
+    if(increase_D) {
+        D <- Ds[t]
+    }
+
+    if(increase_u) stress[stressnode] <- U[t] # u
     x <- double_well_coupled(x, r1, r2, r3, D, A, dt, noise(nnodes, s), stress)
 }
 
 if(plot_transition) {
-                                        #which(rowMeans(results) > cutoff_value)[1]
+    first_node <- which(apply(results, 1, function(x) sum(x > cutoff_value)) > 0)[1]
     t_time <- which(apply(results, 1, function(x) sum(x > cutoff_value)/length(x)) > .3)[1]
+
+    p_transitioned <- apply(results, 1, function(x) sum(x > cutoff_value)/length(x))
 }
 
-## Sim Results
-dev.new(width = 20, height = 10)
-par(mfrow = c(1, 2))
-V(g)$nodestate <- x/max(x)
-colorfun <- colorRamp(c("blue", "orange"), space = "Lab")
-nodecolor <- colorfun(V(g)$nodestate)
-V(g)$color <- apply(nodecolor, 1, function(x) rgb(t(x), maxColorValue = 255))
-nodesize <- ifelse(stress == 0, 4, 8)
-linewidth <- ifelse(stress == 0, .2, 2)
-plot(
-    g, vertex.label = "",  main = main,
-    vertex.size = nodesize
-)
-matplot(
-    1:T, results, type = "l",
-    lty = 1,
-    lwd = linewidth,
-    col = V(g)$color,
-    xlab = "t", ylab = expression(x[i]), main = "Node States"
-)
+## ## Sim Results
+## dev.new(width = 20, height = 10)
+## par(mfrow = c(1, 2))
+## V(g)$nodestate <- x/max(x)
+## colorfun <- colorRamp(c("blue", "orange"), space = "Lab")
+## nodecolor <- colorfun(V(g)$nodestate)
+## V(g)$color <- apply(nodecolor, 1, function(x) rgb(t(x), maxColorValue = 255))
+## nodesize <- ifelse(stress == 0, 4, 8)
+## linewidth <- ifelse(stress == 0, .2, 2)
+## plot(
+##     g, vertex.label = "",  main = main,
+##     vertex.size = nodesize
+## )
+## matplot(
+##     1:T, results, type = "l",
+##     lty = 1,
+##     lwd = linewidth,
+##     col = V(g)$color,
+##     xlab = "t", ylab = expression(x[i]), main = "Node States"
+## )
 
 ## Early Warning
 if(calc_earlywarnings) {
@@ -245,7 +239,11 @@ if(calc_earlywarnings) {
 
 ##nbs <- neighborhood(g, order = 2, nodes = stressnode)[[1]]
 
-dev.new(width = 18, height = 12); par(mfrow = c(2, 3))
+if(increase_u) {
+    dev.new(width = 18, height = 12); par(mfrow = c(2, 3))
+} else {
+    dev.new(width = 14, height = 14); par(mfrow = c(2, 2))
+}
 
 ## 1
 V(g)$nodestate <- x/max(x)
@@ -260,6 +258,7 @@ plot(
 )
 
 ## 2
+par(xpd = FALSE)
 matplot(
     1:T, results, type = "l",
     lty = 1,
@@ -267,18 +266,25 @@ matplot(
     col = V(g)$color,
     xlab = "t", ylab = expression(x[i]), main = "Node States"
 )
-abline(h = cutoff_value, col = "black", lwd = .5, lty = 3)
-abline(v = t_time, col = "black", lwd = .5, lty = 3)
+abline(h = cutoff_value, col = "black", lwd = 2, lty = 3)
+abline(v = first_node, col = "red1", lwd = 2, lty = 3)
+abline(v = t_time, col = "red3", lwd = 2, lty = 3)
 
 ## 3
 ts <- 2:T
 mi <- apply(results[ts, ], 1, function(x) ape::Moran.I(x, A, scaled = TRUE)$observed)
 plot(ts, mi, type = "l", main = "Network I (Original)", xlab = "t", ylab = "I",
-     col = "darkgray", lwd = .5)
+     col = "darkgray", lwd = .5)#, xlim = c(1, T), ylim = c(-.5, .5))
 smooth <- loess(mi ~ ts, span = .1)
 smoothed <- predict(smooth)
-lines(ts, smoothed, col = "blue", lwd = 2, lty = 2)
-abline(v = t_time, col = "black", lwd = .5, lty = 3)
+lines(ts, smoothed, col = "darkorchid", lwd = 2, lty = 2)
+abline(v = first_node, col = "red1", lwd = 2, lty = 3)
+abline(v = t_time, col = "red3", lwd = 2, lty = 3)
+lines(1:T, p_transitioned, lwd = 2, lty = 1, col = "goldenrod")
+## par(new = TRUE)
+## plot(1:T, p_transitioned, type = "l", lwd = 2, lty = 1, col = "goldenrod",
+##      axes = FALSE, xlab = "", ylab = "")
+## axis(side = 4, at = pretty(range(p_transitioned)), col.ticks = "goldenrod", col.axis = "goldenrod")
 
 ## 4
 nsteps <- 5
@@ -287,30 +293,52 @@ ts <- seq(nsteps + 1, T)#seq(offset + 1, T)
 miadj <- sapply(ts, function(t) Iadj(results, A, t = t, nsteps = nsteps))
 ##miadj <- sapply(ts, function(t) Iadj(results, A, times = seq(t - offset, t, by = 10)))##t = t, nsteps = nsteps))
 ##par(mfrow = c(1, 3))
-plot(ts, miadj, type = "l", main = "Network I'", xlab = "t", ylab = "I'", col = "gray", lwd = .5)
+plot(ts, miadj, type = "l", main = "Network I'", xlab = "t", ylab = "I'", col = "gray", lwd = .5)#, xlim = c(1, T), ylim = c(-.5, .5))
 smooth <- loess(miadj ~ ts, span = .1)
 smoothed <- predict(smooth)
-lines(ts, smoothed, col = "red", lwd = 2, lty = 2)
-abline(v = t_time, col = "black", lwd = .5, lty = 3)
+lines(ts, smoothed, col = "dodgerblue", lwd = 2, lty = 2)
+abline(v = first_node, col = "red1", lwd = 2, lty = 3)
+abline(v = t_time, col = "red3", lwd = 2, lty = 3)
+lines(1:T, p_transitioned, lwd = 2, lty = 1, col = "goldenrod")
+## par(new = TRUE)
+## plot(1:T, p_transitioned, type = "l", lwd = 2, lty = 1, col = "goldenrod",
+##      axes = FALSE, xlab = "", ylab = "")
+## axis(side = 4, at = pretty(range(p_transitioned)), col.ticks = "goldenrod", col.axis = "goldenrod")
 
-## 5
-nbs <- neighbors(g, stressnode)
-miadj <- sapply(ts, function(t) Iadj(results[, nbs], A[nbs, nbs], t = t, nsteps = nsteps))
-plot(ts, miadj, type = "l", main = "Neighbors I'", xlab = "t", ylab = "I'", col = "gray", lwd = .5)
-smooth <- loess(miadj ~ ts, span = .1)
-smoothed <- predict(smooth)
-lines(ts, smoothed, col = "red", lwd = 2, lty = 2)
-abline(v = t_time, col = "black", lwd = .5, lty = 3)
-
-## 6
-nbhd <- neighborhood(g, order = 1, nodes = stressnode)[[1]]
-miadj <- sapply(ts, function(t) Iadj(results[, nbhd], A[nbhd, nbhd], t = t, nsteps = nsteps))
-plot(ts, miadj, type = "l", main = "Neighborhood I'", xlab = "t", ylab = "I'", col = "gray", lwd = .5)
-smooth <- loess(miadj ~ ts, span = .1)
-smoothed <- predict(smooth)
-lines(ts, smoothed, col = "red", lwd = 2, lty = 2)
-abline(v = t_time, col = "black", lwd = .5, lty = 3)
-
+if(increase_u) {
+    ## 5
+    nbs <- neighbors(g, stressnode)
+    miadj <- sapply(ts, function(t) Iadj(results[, nbs], A[nbs, nbs], t = t, nsteps = nsteps))
+    plot(ts, miadj, type = "l", main = "Neighbors I'", xlab = "t", ylab = "I'",
+         col = "gray", lwd = .5)#, xlim = c(1, T), ylim = c(-.5, .5))
+    smooth <- loess(miadj ~ ts, span = .1)
+    smoothed <- predict(smooth)
+    lines(ts, smoothed, col = "dodgerblue", lwd = 2, lty = 2)
+    abline(v = first_node, col = "red1", lwd = 2, lty = 3)
+    abline(v = t_time, col = "red3", lwd = 2, lty = 3)
+    lines(1:T, p_transitioned, lwd = 2, lty = 1, col = "goldenrod")
+    ## par(new = TRUE)
+    ## plot(1:T, p_transitioned, type = "l", lwd = 2, lty = 1, col = "goldenrod",
+    ##      axes = FALSE, xlab = "", ylab = "")
+    ## axis(side = 4, at = pretty(range(p_transitioned)), col.ticks = "goldenrod", col.axis = "goldenrod")
+    
+    ## 6
+    nbhd <- neighborhood(g, order = 1, nodes = stressnode)[[1]]
+    miadj <- sapply(ts, function(t) Iadj(results[, nbhd], A[nbhd, nbhd], t = t, nsteps = nsteps))
+    plot(ts, miadj, type = "l", main = "Neighborhood I'", xlab = "t", ylab = "I'",
+         col = "gray", lwd = .5)#, xlim = c(1, T), ylim = c(-.5, .5))
+    smooth <- loess(miadj ~ ts, span = .1)
+    smoothed <- predict(smooth)
+    lines(ts, smoothed, col = "dodgerblue", lwd = 2, lty = 2)
+    abline(v = first_node, col = "red1", lwd = 2, lty = 3)
+    abline(v = t_time, col = "red3", lwd = 2, lty = 3)
+    lines(1:T, p_transitioned, lwd = 2, lty = 1, col = "goldenrod")
+    ## par(new = TRUE)
+    ## plot(1:T, p_transitioned, type = "l", lwd = 2, lty = 1, col = "goldenrod",
+    ##      axes = FALSE, xlab = "", ylab = "")
+    ## axis(side = 4, at = pretty(range(p_transitioned)), col.ticks = "goldenrod", col.axis = "goldenrod")
+    
+}
 ## for(v in nbhd) {
 ##     ew <- earlywarnings::generic_ews(results[results[, v] < 2.5, v],
 ##                                       winsize = 50, detrending = "no")
