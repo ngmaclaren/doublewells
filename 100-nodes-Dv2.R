@@ -69,7 +69,7 @@ graph_choices <- c(
     "small-world"
 )
 
-graph_choice <- graph_choices[5]
+graph_choice <- graph_choices[2]
 calc_earlywarnings <- FALSE # TRUE
 add_stress_to <- "highest" # one of "highest", "high", "low", "lowest", or NULL
 linear_increase <- TRUE # TRUE, FALSE, or NULL (for no increase)
@@ -78,6 +78,7 @@ increase_u <- TRUE
 
 cutoff_value <- 2 # ideally this would be the "point of no return" value
 plot_transition <- TRUE
+smooth_ts <- FALSE
 
 nnodes <- 100
 r1 <- 1 # lower equil
@@ -98,8 +99,8 @@ if(graph_choice == "regular") {
     g <- sample_k_regular(nnodes, 6)
     main <- "Random Regular"
 } else if(graph_choice == "max-entropy") {
-    if(is.null(maxD)) maxD <- 0.66#0.54
-    if(is.null(maxU)) maxU <- 2.7
+    if(is.null(maxD)) maxD <- 0.6#0.66#0.54
+    if(is.null(maxU)) maxU <- 4#2.7
     g <- sample_gnp(nnodes, cprob)
     main <- "Maximum Entropy"
 } else if(graph_choice == "sphere-surface") {
@@ -274,10 +275,12 @@ abline(v = t_time, col = "red3", lwd = 2, lty = 3)
 ts <- 2:T
 mi <- apply(results[ts, ], 1, function(x) ape::Moran.I(x, A, scaled = TRUE)$observed)
 plot(ts, mi, type = "l", main = "Network I (Original)", xlab = "t", ylab = "I",
-     col = "darkgray", lwd = .5)#, xlim = c(1, T), ylim = c(-.5, .5))
-smooth <- loess(mi ~ ts, span = .1)
-smoothed <- predict(smooth)
-lines(ts, smoothed, col = "darkorchid", lwd = 2, lty = 2)
+     col = adjustcolor("darkgray", alpha.f = .8), lwd = 1)#, xlim = c(1, T), ylim = c(-.5, .5))
+if(smooth_ts) {
+    smooth <- loess(mi ~ ts, span = .1)
+    smoothed <- predict(smooth)
+    lines(ts, smoothed, col = "darkorchid", lwd = 2, lty = 2)
+}
 abline(v = first_node, col = "red1", lwd = 2, lty = 3)
 abline(v = t_time, col = "red3", lwd = 2, lty = 3)
 lines(1:T, p_transitioned, lwd = 2, lty = 1, col = "goldenrod")
@@ -293,10 +296,13 @@ ts <- seq(nsteps + 1, T)#seq(offset + 1, T)
 miadj <- sapply(ts, function(t) Iadj(results, A, t = t, nsteps = nsteps))
 ##miadj <- sapply(ts, function(t) Iadj(results, A, times = seq(t - offset, t, by = 10)))##t = t, nsteps = nsteps))
 ##par(mfrow = c(1, 3))
-plot(ts, miadj, type = "l", main = "Network I'", xlab = "t", ylab = "I'", col = "gray", lwd = .5)#, xlim = c(1, T), ylim = c(-.5, .5))
-smooth <- loess(miadj ~ ts, span = .1)
-smoothed <- predict(smooth)
-lines(ts, smoothed, col = "dodgerblue", lwd = 2, lty = 2)
+plot(ts, miadj, type = "l", main = "Network I'", xlab = "t", ylab = "I'",
+     col = adjustcolor("darkgray", alpha.f = .8), lwd = 1)#, xlim = c(1, T), ylim = c(-.5, .5))
+if(smooth_ts) {
+    smooth <- loess(miadj ~ ts, span = .1)
+    smoothed <- predict(smooth)
+    lines(ts, smoothed, col = "dodgerblue", lwd = 2, lty = 2)
+}
 abline(v = first_node, col = "red1", lwd = 2, lty = 3)
 abline(v = t_time, col = "red3", lwd = 2, lty = 3)
 lines(1:T, p_transitioned, lwd = 2, lty = 1, col = "goldenrod")
@@ -310,10 +316,12 @@ if(increase_u) {
     nbs <- neighbors(g, stressnode)
     miadj <- sapply(ts, function(t) Iadj(results[, nbs], A[nbs, nbs], t = t, nsteps = nsteps))
     plot(ts, miadj, type = "l", main = "Neighbors I'", xlab = "t", ylab = "I'",
-         col = "gray", lwd = .5)#, xlim = c(1, T), ylim = c(-.5, .5))
-    smooth <- loess(miadj ~ ts, span = .1)
-    smoothed <- predict(smooth)
-    lines(ts, smoothed, col = "dodgerblue", lwd = 2, lty = 2)
+         col = adjustcolor("darkgray", alpha.f = .8), lwd = 1)#, xlim = c(1, T), ylim = c(-.5, .5))
+    if(smooth_ts) {
+        smooth <- loess(miadj ~ ts, span = .1)
+        smoothed <- predict(smooth)
+        lines(ts, smoothed, col = "dodgerblue", lwd = 2, lty = 2)
+    }
     abline(v = first_node, col = "red1", lwd = 2, lty = 3)
     abline(v = t_time, col = "red3", lwd = 2, lty = 3)
     lines(1:T, p_transitioned, lwd = 2, lty = 1, col = "goldenrod")
@@ -326,10 +334,12 @@ if(increase_u) {
     nbhd <- neighborhood(g, order = 1, nodes = stressnode)[[1]]
     miadj <- sapply(ts, function(t) Iadj(results[, nbhd], A[nbhd, nbhd], t = t, nsteps = nsteps))
     plot(ts, miadj, type = "l", main = "Neighborhood I'", xlab = "t", ylab = "I'",
-         col = "gray", lwd = .5)#, xlim = c(1, T), ylim = c(-.5, .5))
-    smooth <- loess(miadj ~ ts, span = .1)
-    smoothed <- predict(smooth)
-    lines(ts, smoothed, col = "dodgerblue", lwd = 2, lty = 2)
+         col = adjustcolor("darkgray", alpha.f = .8), lwd = 1)#, xlim = c(1, T), ylim = c(-.5, .5))
+    if(smooth_ts) {
+        smooth <- loess(miadj ~ ts, span = .1)
+        smoothed <- predict(smooth)
+        lines(ts, smoothed, col = "dodgerblue", lwd = 2, lty = 2)
+    }
     abline(v = first_node, col = "red1", lwd = 2, lty = 3)
     abline(v = t_time, col = "red3", lwd = 2, lty = 3)
     lines(1:T, p_transitioned, lwd = 2, lty = 1, col = "goldenrod")
