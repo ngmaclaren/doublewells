@@ -42,7 +42,7 @@ Iadj <- function(X, A, t = NULL, nsteps = NULL, times = NULL) {
 
     X <- X[times, ]
     N <- nrow(A)
-    W <- sum(A)
+    W <- sum(A)/2
 
     muI <- colMeans(X)
     deltaX <- apply(X, 2, function(x) x[nsteps] - mean(x))

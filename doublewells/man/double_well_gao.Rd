@@ -8,7 +8,7 @@
 \description{
   %%  ~~ A concise (1-5 lines) description of what the function does. ~~
   Calculate the next state of a coupled double-well system using the Gao
-  et al. approximation.
+  et al. approximation. Not currently maintained.
 }
 \usage{
 double_well_gao(x, r1, r2, r3, D, A, beta_eff, dt)
@@ -77,3 +77,4 @@ double_well_gao(x, r1, r2, r3, D, A, beta_eff, dt)
 % \concept{ ~cpt1 }
 % \concept{ ~cpt2 }
 % Use only one concept per line.
+}

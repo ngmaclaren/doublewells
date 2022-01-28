@@ -1,6 +1,6 @@
 export(
-    "double_well", "double_well_coupled"
-  , "harvestmodel"
-  , "windowed_sdmethod", "windowed_lagmethod"
-  , "complete", "feedback", "feedforward", "fromthemiddleout", "linemotif", "tothemiddle"
+    "double_well", "double_well_coupled", "harvestmodel", "noise",
+    "windowed_sdmethod", "windowed_lagmethod", "windowed_acmethod", "sampled_eigmethod", "Iadj",
+    "select_stressnode",
+    "complete", "feedback", "feedforward", "fromthemiddleout", "linemotif", "tothemiddle"
 )

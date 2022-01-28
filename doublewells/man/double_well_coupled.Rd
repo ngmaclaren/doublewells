@@ -1,5 +1,6 @@
 \name{double_well_coupled}
 \alias{double_well_coupled}
+\alias{noise}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
   %%  ~~function to do ... ~~
@@ -12,9 +13,13 @@
   stress and noise.
 }
 \usage{
-double_well_coupled(x, r1, r2, r3, D, A, dt, noise = NULL, stress = rep(0, length(x)))
+  double_well_coupled(x, r1, r2, r3, D, A, dt, noise = NULL, stress =
+rep(0, length(x)))
+
+  noise(n, s, f = rnorm) 
 }
 %- maybe also 'usage' for other objects documented here.
+
 \arguments{
   \item{x}{
     %%     ~~Describe \code{x} here~~
@@ -47,7 +52,11 @@ double_well_coupled(x, r1, r2, r3, D, A, dt, noise = NULL, stress = rep(0, lengt
   \item{noise}{
     %%     ~~Describe \code{noise} here~~
     Should be a random number generator as a function call. For example
-    `rnorm(length(x), 0, 10)`.
+    `rnorm(length(x), 0, 10)`. Also available is the `noise` function,
+    which takes one of R's random variate generators (e.g., `rnorm`),
+    `f`, the number of required values, `n`, and the intensity of the
+    random noise process, `s` (which is the standard deviation in a
+    Gaussian noise process).
   }
   \item{stress}{
     %%     ~~Describe \code{stress} here~~
@@ -62,12 +71,12 @@ double_well_coupled(x, r1, r2, r3, D, A, dt, noise = NULL, stress = rep(0, lengt
   This function implements the differential equation for the double-well
   system using the stochastic Euler method:
   
-  \[Delta x_i = (-(x_i - r_1)(x_i - r_2)(x_i - r_3) + D \sum_{j=1}^n
+  \[Delta x_i = (-(x_i - r_1)(x_i - r_2)(x_i - r_3) + D sum_{j=1}^n
   Ax_j + u_i + e_i) Delta t\]
 
   The state variable is `x`; `r1`, `r2`, and `r3` are parameters; `D` is
   the coupling strength, assumed to be the same across the system; `A`
-  is an adjacency matrix; `u` is additive stress; and `\epsilon` is a
+  is an adjacency matrix; `u` is additive stress; and e_i is a
   noise term. For convenience, use `r1` < `r2` < `r3`. The `noise`
   argument if not NULL should be a function that generates a single
   random value.

@@ -1,39 +1,9 @@
 ## Code by Neil MacLaren, 27 Jan 2022
 
-## load in "./data/testgraph.gml" for future work
+## In this version, set D to a relatively high level and increase u.
 
 library(igraph)
 library(doublewells)
-
-noise <- function(n, s) rnorm(n, 0, s)
-
-Iadj <- function(X, A, t = NULL, nsteps = NULL, times = NULL) {
-    ## A is a 2D array of connection weights (all w_ij ∈ {0, 1} for now)
-    ## t is the chosen time
-    ## X is a 2D array where the rows are t_t and the columns are x_i
-    ##stopifnot((length(t) == 1 & length(nsteps) == 1) | length(times) > 1)
-    if(length(times) == 0) times <- seq(t - nsteps + 1, t)
-    if(is.null(nsteps)) nsteps <- length(times)
-
-    X <- X[times, ]
-    N <- nrow(A)
-    W <- sum(A)/2 # this is a change
-
-    muI <- colMeans(X)
-    deltaX <- apply(X, 2, function(x) x[nsteps] - mean(x))
-    
-    numerator <- 0
-    for(i in 1:nrow(A)) {
-        for(j in 1:ncol(A)) {
-            if(j >= i) next
-            y <- A[i, j]*deltaX[i]*deltaX[j]
-            numerator <- numerator + y
-        }
-    }
-    denominator <- sum((X[nrow(X), ] - muI)^2)
-
-    (N/W)*(numerator/denominator)
-}
 
 calc_ew <- function(X, A, samples) {
     if(which_ew == "I'") {
@@ -50,7 +20,7 @@ calc_ew <- function(X, A, samples) {
 }
 
 ews <- c("I'", "eig")
-which_ew <- ews[1]
+which_ew <- ews[2]
 
 production_runs <- TRUE
 
@@ -71,12 +41,16 @@ mdnode <- V(g)[which(degree(g) == max(degree(g)))]
 ## Node Systems
 r <- c(1, 4, 7) # double well parameters
 s <- 0.005 # sd of noise process
-D <- 0.5 # connection strength; this is the only parameter varied in the production runs
+D <- 0.54 # connection strength; this is the only parameter varied in the production runs
 p <- 3*s # perturbation strength
 u <- rep(0, nnodes) # stress vector
 
 dt <- 0.01
 T <- 1000
+
+## Stress
+stressnode <- select_stressnode(g, "highest")
+u[stressnode] <- 1.95
 
 ## Perturbation
 p_start <- 500
@@ -99,10 +73,10 @@ if(!production_runs) {
 
 ### Analysis
     ## Recovery
-    baseline <- X[350:450, mdnode]
+    baseline <- X[350:450, stressnode]
     bl_mean <- mean(baseline)
     bl_sd <- sd(baseline)
-    time_to_recover <- which(X[p_stop:T, mdnode] <= (bl_mean + 1.96*bl_sd))[1]
+    time_to_recover <- which(X[p_stop:T, stressnode] <= (bl_mean + 1.96*bl_sd))[1]
     recovered <- time_to_recover + p_stop
     if(is.na(time_to_recover)) time_to_recover <- "Failed to Recover"
 
@@ -110,21 +84,26 @@ if(!production_runs) {
     samples <- seq(100, p_start, by = 100)
     ew <- calc_ew(X, A, samples)
 
-    matplot(1:T, X, type = "l", lty = 1, lwd = .5, col = "steelblue",
+    colors <- ifelse(u == 0, "steelblue", "firebrick")
+    lwds <- ifelse(u == 0, .5, 1)
+    matplot(1:T, X, type = "l", lty = 1, lwd = lwds, col = colors,
             xlab = "t", ylab = expression(x[i]),
             main = paste0("D = ", D, "; Time to Recover: ", time_to_recover))
     mtext(paste0(which_ew, " = ", round(ew, 4)), side = 3, line = 0)
     abline(h = bl_mean + 1.96*bl_sd, lty = 1, lwd = 1, col = "slategray")
     abline(v = recovered, lty = 1, lwd = 1, col = "slategray")
 } else {
-    Ds <- c(.2, .3, .4, .5, .525, .55, .575, .59, .6, .61)
+    ##Ds <- c(.2, .3, .4, .5, .525, .55, .575, .59, .6, .61)
+    Us <- c(.1, .5, 1, 1.25, 1.5, 1.6, 1.7, 1.8, 1.9, 1.91, 1.92, 1.93, 1.94, 1.95)
+    stressnode <- select_stressnode(g, "highest")
     nsims <- 100
-    results <- vector("list", length(Ds)*nsims)
+    results <- vector("list", length(Us)*nsims)
     ## D, nsim, I., rtime
     sim_n <- 1
-    for(i in 1:length(Ds)) {
+    for(i in 1:length(Us)) {
         for(j in 1:nsims) {
-            D <- Ds[i]
+            ## Stress
+            u[stressnode] <- Us[i]
             
             ## Set/Re-Set X state
             initialx <- rep(1, nnodes) + noise(nnodes, s)
@@ -139,16 +118,16 @@ if(!production_runs) {
                 if(t >= p_start & t < (p_start + p_dur)) x <- x + p
             }
 
-            baseline <- X[350:450, mdnode]
+            baseline <- X[350:450, stressnode]
             bl_mean <- mean(baseline)
             bl_sd <- sd(baseline)
-            time_to_recover <- which(X[p_stop:T, mdnode] <= (bl_mean + 1.96*bl_sd))[1]
+            time_to_recover <- which(X[p_stop:T, stressnode] <= (bl_mean + 1.96*bl_sd))[1]
 
             samples <- seq(100, p_start, by = 100)
             ew <- calc_ew(X, A, samples)
             ##I. <- Iadj(X, A, times = samples)
 
-            result <- data.frame(D = D, nsim = j, ew = ew, rtime = time_to_recover)
+            result <- data.frame(u = Us[i], nsim = j, ew = ew, rtime = time_to_recover)
             results[[sim_n]] <- result
             sim_n <- sim_n + 1
         }
@@ -158,8 +137,8 @@ if(!production_runs) {
 
     dev.new(width = 14, height = 7)
     par(mfrow = c(1, 2))
-    plot(rtime ~ D, data = results, type = "p", pch = 19, cex = .75, col = "slategray",
-         xlab = "D", ylab = "Recovery Time")
+    plot(rtime ~ u, data = results, type = "p", pch = 19, cex = .75, col = "slategray",
+         xlab = "u", ylab = "Recovery Time")
     plot(rtime ~ ew, data = results, type = "p", pch = 19, cex = .75, col = "slategray",
          xlab = which_ew, ylab = "Recovery Time")
 }
