@@ -94,8 +94,14 @@ windowed_acmethod <- function(results, wl) {
 
 Iadj <- function(X, A, t = NULL, nsteps = NULL, times = NULL) {
     "Calculate a variant of Moran's I that removes the expected value of x_i. A is a 2D array of connection weights (all w_ij ∈ {0, 1} for now), t is the chosen time, X is a 2D array where the rows are t_t and the columns are x_i."
+    if(length(t) > 0 & length(nsteps) > 0) {
+        times <- seq(t - nsteps + 1, t)
+    } else if(length(times) > 1) {
+        nsteps <- length(times)
+    }
+
     stopifnot((length(t) == 1 & length(nsteps) == 1) | length(times) > 1)
-    if(length(times) == 0) times <- seq(t - nsteps + 1, t)
+    ##if(length(times) == 0) times <- seq(t - nsteps + 1, t)
 
     X <- X[times, ]
     N <- nrow(A)
