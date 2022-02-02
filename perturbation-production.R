@@ -29,9 +29,9 @@ set.seed(1)
 ews <- c("I", "I'", "eig")
 which_ew <- ews[3]
 
-which_param <- "u" # "D"
+which_param <- "D" # "u"
     
-production_runs <- FALSE # TRUE
+production_runs <- TRUE # FALSE
 
 ## Graph
 generate_new <- FALSE
@@ -169,20 +169,20 @@ if(!production_runs) {
     }
     
     ##dev.new(width = 16, height = 4)
-    pdf(filename, width = 16, height = 4)
-    par(mfrow = c(1, 4), cex.axis = 1.25, cex.lab = 1.25)
+    ##pdf(filename, width = 16, height = 4)
+    ##par(mfrow = c(1, 4), cex.axis = 1.25, cex.lab = 1.25)
     if(which_param == "D") {
-        plot(rtime ~ D, data = results, type = "p", pch = 19, cex = .75, col = "slategray",
-             xlab = "D", ylab = "Recovery Time")
+        plot(I. ~ D, data = results, type = "p", pch = 19, cex = .75, col = "slategray",
+             xlab = "D", ylab = "I")#"Recovery Time")
     } else if(which_param == "u") {
         plot(rtime ~ u, data = results, type = "p", pch = 19, cex = .75, col = "slategray",
              xlab = "u", ylab = "Recovery Time")
     }
-    plot(rtime ~ I, data = results, type = "p", pch = 19, cex = .75, col = "slategray",
-         xlab = "Moran's I", ylab = "")
-    plot(rtime ~ I., data = results, type = "p", pch = 19, cex = .75, col = "slategray",
-         xlab = "I'", ylab = "")
-    plot(rtime ~ eig, data = results, type = "p", pch = 19, cex = .75, col = "slategray",
-         xlab = expression(lambda[1]), ylab = "")
-    dev.off()
+    ## plot(rtime ~ I, data = results, type = "p", pch = 19, cex = .75, col = "slategray",
+    ##      xlab = "Moran's I", ylab = "")
+    ## plot(rtime ~ I., data = results, type = "p", pch = 19, cex = .75, col = "slategray",
+    ##      xlab = "I'", ylab = "")
+    ## plot(rtime ~ eig, data = results, type = "p", pch = 19, cex = .75, col = "slategray",
+    ##      xlab = expression(lambda[1]), ylab = "")
+    ## dev.off()
 }
