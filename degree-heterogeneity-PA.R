@@ -15,17 +15,20 @@ whichstate <- function(x, cutoff = 7) ifelse(x > cutoff, 1, 0)
 
 set.seed(1)
 
-which_param <- "D" # "u"
+which_param <- "u" # "D"
 production_runs <- TRUE # FALSE
 
 ## Graph
 generate_new <- FALSE
 if(generate_new) {
     nnodes <- 100
-    cprob <- 0.06
-    g <- sample_gnp(nnodes, cprob)
+    ##cprob <- 0.06
+    ##g <- sample_gnp(nnodes, cprob)
+    outdist <- c(0, .6, .5, .4, .3, .2, .1, .05)
+    g <- sample_pa(nnodes, power = 1.5, out.dist = outdist, directed = FALSE)
+    write_graph(g, "./data/testgraph-BA.gml", format = "gml")
 } else {
-    g <- read_graph("./data/testgraph.gml", format = "gml")
+    g <- read_graph("./data/testgraph-BA.gml", format = "gml")
     nnodes <- vcount(g)
 }
 A <- as_adj(g, type = "both", sparse = FALSE)
@@ -33,7 +36,7 @@ A <- as_adj(g, type = "both", sparse = FALSE)
 ## Node Systems
 r <- c(1, 4, 7) # double well parameters
 s <- 0.005 # sd of noise process
-D <- 0.55 # connection strength; this is the only parameter varied in the production runs
+D <- 0.21 # connection strength; needs to be a lot lower for PA graphs
 p <- if(s > 0) 3*s else 0.015 # perturbation strength
 u <- rep(0, nnodes) # stress vector
 
@@ -53,7 +56,7 @@ if(!production_runs) {
     
     ## Stress
     stressnode <- select_stressnode(g, "highest")
-    if(which_param == "u") u[stressnode] <- 1.8
+    if(which_param == "u") u[stressnode] <- 1
 
     ## Simulation
     for(t in 1:T) {
@@ -85,12 +88,13 @@ if(!production_runs) {
     
 } else {
     if(which_param == "D") {
-        ##Ds <- c(.2, .3, .4, .5, .525, .55, .575, .59, .6, .61)
-        Ds <- seq(0.615, 0.635, length.out = 10)
+        ##Ds <- seq(0.615, 0.635, length.out = 10)
+        Ds <- seq(.2, .4, length.out = 10)
         Us <- rep(0, length(Ds))
     } else if(which_param == "u") {
-        ##Us <- c(1, 1.25, 1.5, 1.6, 1.7, 1.8, 1.9, 1.91, 1.93, 1.95)
-        Us <- seq(1.84, 2.02, length.out = 10)
+        ##Us <- seq(1.84, 2.02, length.out = 10)
+        ##Us <- seq(0.05, 2, length.out = 10)
+        Us <- seq(.25, 1, length.out = 10)#c(.01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10)
         Ds <- rep(D, length(Us))
     }
 
@@ -151,13 +155,13 @@ if(!production_runs) {
     results$y <- whichstate(results$endx)
 
     ##m1 <- glm(y ~ D + degx + nbstate, family = binomial, data = subset(results, D < 0.64))
-    dev.new(width = 15, height = 15)
+    dev.new(width = 15, height = 10)
     ggplot(results, aes(degx, endx, color = as.factor(nbstate))) +
         geom_point(size = 3, pch = 1) +
         scale_color_brewer(palette = "Set1",
                            labels = c("No", "Yes"),
                            name = "Any Neighbors\nin Upper State?") +
-        facet_wrap("D") +
+        facet_wrap("u") +
         xlab("Node Degree") + ylab("State of X at End of Simulation") +
         theme_bw() +
         theme(text = element_text(size = 14))
