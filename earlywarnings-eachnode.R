@@ -127,7 +127,7 @@ k <- degree(g)
 
 ## First Plot
 filenamestem <- "./img/n-earlywarnings"
-filename <- paste0(filenamestem, "-", which_ew, "-", which_param, ".pdf")
+filename <- paste0(filenamestem, "-", which_net, "-", which_ew, "-", which_param, ".pdf")
 ## if(which_net == "me") {
 ##     if(which_param == "D") {
 ##         filename <- paste0(filenamestem, which_ew, ".pdf")
@@ -173,8 +173,8 @@ mtext("# Nodes", side = 4, line = 3)
 if(save_plot) dev.off()
 
 ## Second plot
-filenamestem <- "./img/n-earlywarnings-I"
-filename <- paste0(filenamestem, "-", which_ew, "-", which_param, ".pdf")
+filenamestem <- "./img/n-earlywarnings"
+filename <- paste0(filenamestem, "-", which_net, "-I-", which_param, ".pdf")
 ## if(which_net == "me") {
 ##     filename <- paste0(filenamestem, which_ew, "-"
 ## } else if(which_net == "pa") {
