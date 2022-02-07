@@ -3,8 +3,8 @@
 library(igraph)
 library(doublewells)
 
-whichstate <- function(x, cutoff = 7) ifelse(x > cutoff, 1, 0)
-movingup <- function(x, cutoff = 4) ifelse(x > cutoff, 1, 0)
+whichstate <- function(x, cutoff = 7) ifelse(x >= cutoff, 1, 0)
+movingup <- function(x, cutoff = 2.5) ifelse(x >= cutoff, 1, 0)
 
 set.seed(1)
 
@@ -12,7 +12,8 @@ which_net <- "pa" # "me"
 which_param <- "D" # "u"
 which_ew <- "sd" # "ac"
 save_plot <- TRUE # FALSE
-cutoff <- .75*nnodes
+cutoff <- .25*nnodes
+##if(which_net == "me") cutoff <- .25*nnodes else cutoff <- .75*nnodes
 
 stopmsg <- "Will not converge with param settings: maybe 'u' needs to be applied to more than one node."
 if(which_net == "pa" & which_param == "u") stop(stopmsg)
@@ -128,19 +129,6 @@ k <- degree(g)
 ## First Plot
 filenamestem <- "./img/n-earlywarnings"
 filename <- paste0(filenamestem, "-", which_net, "-", which_ew, "-", which_param, ".pdf")
-## if(which_net == "me") {
-##     if(which_param == "D") {
-##         filename <- paste0(filenamestem, which_ew, ".pdf")
-##     } else if(which_param == "u") {
-##         filename <- paste0(filenamestem, which_ew, "-u.pdf")
-##     }
-## } else if(which_net == "pa") {
-##     if(which_param == "D") {
-##         filename <- paste0(filenamestem, which_ew, "-PA.pdf")
-##     } else if(which_param == "u") {
-##         filename <- paste0(filenamestem, which_ew, "-u-PA.pdf")
-##     }
-## }
 
 if(save_plot) {
     pdf(filename, height = 7, width = 21)

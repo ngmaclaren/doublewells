@@ -123,12 +123,16 @@ Iadj <- function(X, A, t = NULL, nsteps = NULL, times = NULL) {
     (N/W)*(numerator/denomenator)
 }
 
-sampled_eigmethod <- function(X, A, samples) {
+sampled_eigenmethod <- function(X, A, samples, nodes) {
     "From an output matrix, X, with connections between x_i given in A, take x_i at `samples` points in time and return the dominant eigenvalue of the resulting covariance matrix."
-    C <- cov(X[samples, ])
+    X <- X[samples, nodes]
+    A <- A[nodes, nodes]
+    C <- cov(X)
     eig <- eigen(C, symmetric = TRUE, only.values = TRUE)[[1]][1]
     return(eig)
 }
+
+sampled_MoranI <- function(X, A, nodes, t) ape::Moran.I(X[t, nodes], A[nodes, nodes])$observed
 
 ## Helper Functions
 
