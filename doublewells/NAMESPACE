@@ -1,6 +1,20 @@
 export(
+    ## Models
     "double_well", "double_well_coupled", "harvestmodel", "noise",
-    "windowed_sdmethod", "windowed_lagmethod", "windowed_acmethod", "sampled_eigmethod", "Iadj",
+
+    ## Early Warnings
+    "windowed_sdmethod", "windowed_lagmethod", "windowed_acmethod", "Iadj",
+    "sampled_eigenmethod", "sampled_MoranI", "sampled_sdmethod",
+
+    ## Helper Functions
     "select_stressnode",
+
+    ## Algorithm Support Functions
+    "choose_sentinels",
+
+    ## Counting Functions
+    "upperstate", "lowerstate",
+
+    ## Pre-defined, named motifs
     "complete", "feedback", "feedforward", "fromthemiddleout", "linemotif", "tothemiddle"
 )

@@ -124,7 +124,7 @@ Iadj <- function(X, A, t = NULL, nsteps = NULL, times = NULL) {
 }
 
 sampled_eigenmethod <- function(X, A, samples, nodes) {
-    "From an output matrix, X, with connections between x_i given in A, take x_i at `samples` points in time and return the dominant eigenvalue of the resulting covariance matrix."
+    "From an output matrix, X, with connections between x_i given in A, take X at `samples` time steps, make a covariance matrix from that data, and return the dominant eigenvalue of the covariance matrix."
     X <- X[samples, nodes]
     A <- A[nodes, nodes]
     C <- cov(X)
@@ -132,7 +132,17 @@ sampled_eigenmethod <- function(X, A, samples, nodes) {
     return(eig)
 }
 
-sampled_MoranI <- function(X, A, nodes, t) ape::Moran.I(X[t, nodes], A[nodes, nodes])$observed
+sampled_MoranI <- function(X, A, nodes, t) {
+    "An adjustment to the 'ape' package's Moran's I: for output matrix, X, with connections in adjacency matrix, A, find the value of Moran's I considering only what is effectively an induced subgraph of the original graph. The index is calculated over the states x_i of the selected nodes."
+    ape::Moran.I(X[t, nodes], A[nodes, nodes])$observed
+}
+
+sampled_sdmethod <- function(X, t, wl) {
+    "Calculate the standard deviation sd(x_i) for output matrix, X, over the time steps in a window. Time step `t` is the last step of the window, with the window calculated `(wl + 1):t`."
+    if(!is.matrix(X)) {
+        return(sd(X[(wl+1):t]))
+    } else return(apply(X[(wl+1):t, ], 2, sd))
+}
 
 ## Helper Functions
 
@@ -162,6 +172,24 @@ select_stressnode <- function(g, add_stress_to = NULL) {
     }
 }
 
+## Algorithm Support Functions
+choose_sentinels <- function(g, n, v = V(g)) {
+    "Choose `n` sentinel nodes in a graph `g` based on some criteria. Current criterion is only the degree of the node, checking for the `n` highest degree nodes in the list of available nodes,`v`."
+    deg <- sort(degree(g, v = v), decreasing = TRUE)
+    maxdegs <- head(deg, n)
+    nodes <- sample(V(g)[which(degree(g) %in% maxdegs)], n)
+    V(g)[nodes]
+}
+
+## Counting Functions
+upperstate <- function(x, cutoff = 7) {
+    "A counting function: return 1 if the node is in the upper state (currently x_i = 7), and zero otherwise."
+    ifelse(x >= cutoff, 1, 0)
+}
+lowerstate <- function(x, cutoff = 2.5) {
+    "A counting function: return 1 if the node is in the lower state and zero otherwise. The current default cutoff is set to 2.5, which is /approximately/ the value of x_i at which the node state will be 'pulled' towards the separatrix when r = (1, 4, 7), the current default. A better value can be found analytically if it becomes important to do so."
+    ifelse(x <= cutoff, 1, 0)
+}
 
 ## Old functions
 
