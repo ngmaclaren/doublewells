@@ -7,7 +7,7 @@ set.seed(123)
 
 which_net <- "pa" # "me"
 which_param <- "D" # "u"
-save_plots <- TRUE # FALSE
+save_plots <- FALSE # TRUE
 
 stopmsg <- "Will not converge with param settings: maybe 'u' needs to be applied to more than one node."
 if(which_net == "pa" & which_param == "u") stop(stopmsg)
@@ -70,6 +70,8 @@ Ds <- numeric()
 Us <- numeric()
 eigs <- numeric()
 fulleigs <- numeric()
+vareigs <- numeric()
+fullvareigs <- numeric()
 moranIs <- numeric()
 fullIs <- numeric()
 ssds <- list()
@@ -100,6 +102,17 @@ while(length(atrisk) > cutoff) {
     ## Covariance matrix --> dominant eigenvalue
     eig <- sampled_eigenmethod(X, A, samples = samples, nodes = atrisk)
     fulleig <- sampled_eigenmethod(X, A, samples = samples, nodes = V(g))
+
+    vareig <- sampled_eigenmethod(X, A, samples = samples, nodes = atrisk, var_only = TRUE)
+    fullvareig <- sampled_eigenmethod(X, A, samples = samples, nodes = V(g), var_only = TRUE)
+
+    ## testX <- X[samples, ]
+    ## testA <- A
+    ## testC <- cov(X)
+    ## testC[lower.tri(testC)] <- 0
+    ## testC[upper.tri(testC)] <- 0
+    ## fullvareig <- eigen(testC, symmetric = TRUE, only.values = TRUE)[[1]][1]
+    
     ## Moran's I
     moranI <- sampled_MoranI(X, A, nodes = atrisk, t = stepT)
     fullI <- ape::Moran.I(x, A)$observed
@@ -137,6 +150,8 @@ while(length(atrisk) > cutoff) {
 
     eigs[i] <- eig
     fulleigs[i] <- fulleig
+    vareigs[i] <- vareig
+    fullvareigs[i] <- fullvareig
     moranIs[i] <- moranI
     fullIs[i] <- fullI
     ssds[[i]] <- ssd
@@ -166,14 +181,21 @@ if(save_plots) {
     dev.new(width = 10, height = 5)
 }
 par(mar = c(5, 4, 4, 8), xpd = TRUE)
+xlim <- range(Ds)
+ylim <- range(log(c(eigs, fulleigs, fullvareigs)))
 plot(Ds, log(eigs), type = "o", pch = 1, col = "steelblue",
-     xlab = "D", ylab = expression(ln(lambda[1])))
-points(Ds, log(fulleigs), type = "p", pch = 3, col = "navy")
+     xlab = "D", ylab = expression(ln(lambda[1])), xlim = xlim, ylim = ylim)
+points(Ds, log(fulleigs), pch = 3, col = "navy")
+points(Ds, log(vareigs), type = "o", lty = 2, pch = 5, col = "goldenrod")
+points(Ds, log(fullvareigs), pch = 4, col = "orangered")
 par(new = TRUE)
 plot(Ds, n_atrisk[-length(n_atrisk)], pch = 2, col = "darkorchid",
      axes = FALSE, xlab = "", ylab = "")
-legend("bottomright", legend = c("At Risk Nodes", "All Nodes", "# At Risk Nodes"), bty = "n",
-       pch = c(1, 3, 2), col = c("steelblue", "navy", "darkorchid"), inset = c(-0.2, 0))
+legend(
+    "bottomright", bty = "n", inset = c(-0.2, 0),
+    legend = c("At Risk Nodes", "All Nodes", "At Risk (Var)", "All Nodes (Var)", "# At Risk Nodes"),
+    pch = c(1, 3, 5, 4, 2), col = c("steelblue", "navy", "goldenrod", "orangered", "darkorchid")
+)
 if(save_plots) dev.off()
 
 if(save_plots) {

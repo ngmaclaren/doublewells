@@ -123,11 +123,14 @@ Iadj <- function(X, A, t = NULL, nsteps = NULL, times = NULL) {
     (N/W)*(numerator/denomenator)
 }
 
-sampled_eigenmethod <- function(X, A, samples, nodes) {
+sampled_eigenmethod <- function(X, A, samples, nodes, var_only = FALSE) {
     "From an output matrix, X, with connections between x_i given in A, take X at `samples` time steps, make a covariance matrix from that data, and return the dominant eigenvalue of the covariance matrix."
     X <- X[samples, nodes]
-    A <- A[nodes, nodes]
+    A <- A[nodes, nodes] # why?
     C <- cov(X)
+    if(var_only) {
+        C[lower.tri(C) | upper.tri(C)] <- 0
+    }
     eig <- eigen(C, symmetric = TRUE, only.values = TRUE)[[1]][1]
     return(eig)
 }
