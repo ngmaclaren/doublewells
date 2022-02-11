@@ -75,6 +75,12 @@ fullvareigs <- numeric()
 moranIs <- numeric()
 fullIs <- numeric()
 ssds <- list()
+ssdeigs <- numeric()
+ssdeigvars <- numeric()
+
+new_ssds <- list()
+new_ssdeigs <- numeric()
+
 n_atrisk <- numeric()
 
 ## Main Loop
@@ -141,7 +147,14 @@ while(length(atrisk) > cutoff) {
         ## sentinels <- c(sentinels, choose_sentinels(g, n = n_new, v = available))
     }
     ssd <- sampled_sdmethod(X[, sentinels], t = stepT, wl = wl)
+    ssdeig <- sampled_eigenmethod(X, A, samples = samples, nodes = sentinels)
+    ssdeigvar <- sampled_eigenmethod(X, A, samples = samples, nodes = sentinels,
+                                     var_only = TRUE)
 
+    new_sentinels <- sentinel_ranking(g, x, n = 5)
+    new_ssd <- sampled_sdmethod(X[, new_sentinels], t = stepT, wl = wl)
+    new_ssdeig <- sampled_eigenmethod(X, A, samples = samples, nodes = new_sentinels)
+    
     ## Debugging
     ## print(D)
     ## print(x)
@@ -155,6 +168,12 @@ while(length(atrisk) > cutoff) {
     moranIs[i] <- moranI
     fullIs[i] <- fullI
     ssds[[i]] <- ssd
+    ssdeigs[i] <- ssdeig
+    ssdeigvars[i] <- ssdeigvar
+
+    new_ssds[[i]] <- new_ssd
+    new_ssdeigs[i] <- new_ssdeig
+    
     Ds[i] <- D
     Us[i] <- u[stressnode]
 
@@ -173,6 +192,7 @@ while(length(atrisk) > cutoff) {
 
 ## Collating
 ssds <- do.call(rbind, ssds)
+new_ssds <- do.call(rbind, new_ssds)
 
 ## Plotting
 if(save_plots) {
@@ -228,3 +248,39 @@ plot(Ds, n_atrisk[-length(n_atrisk)], pch = 2, col = "darkorchid",
 legend("bottomright", legend = c("Sentinel Nodes", "# At Risk Nodes"), bty = "n",
        pch = c(1, 2), col = c("olivedrab", "darkorchid"), inset = c(-0.2, 0))
 if(save_plots) dev.off()
+
+if(save_plots) {
+    pdf("./img/ew-sentinelnodes-eigs.pdf", width = 10, height = 5)
+} else {
+    dev.new(width = 10, height = 5)
+}
+par(mar = c(5, 4, 4, 8), xpd = TRUE)
+plot(Ds, log(ssdeigs), type = "o", pch = 1, col = "sienna",
+     xlab = "D", ylab = expression(ln(lambda[1])))
+points(Ds, log(ssdeigvars), type = "p", pch = 3, col = "salmon")
+legend("bottomright", legend = c("Var-Covar", "Var Only"),
+       pch = c(1, 3), col = c("sienna", "salmon"), inset = c(-0.2, 0), bty = "n")
+par(new = TRUE)
+plot(Ds, n_atrisk[-length(n_atrisk)], pch = 2, col = "darkorchid",
+     axes = FALSE, xlab = "", ylab = "")
+if(save_plots) dev.off()
+
+if(save_plots) {
+    pdf("./img/ew-newsentinelnodes.pdf", width = 10, height = 5)
+} else {
+    dev.new(width = 10, height = 5)
+}
+par(mar = c(5, 4, 4, 8), xpd = TRUE)
+xlim <- range(Ds)
+ylim <- range(c(log(new_ssds), log(new_ssdeigs)))
+matplot(Ds, log(new_ssds), type = "p", pch = 1, col = "sandybrown",
+        xlab = "D", ylab = "Indicator (ln)", xlim = xlim, ylim = ylim)
+points(Ds, log(new_ssdeigs), pch = 3, lwd = 2, col = "olivedrab")
+legend("bottomright", bty = "n", inset = c(-0.2, 0),
+       legend = c("Node-Level", expression(lambda[1])),
+       col = c("sandybrown", "olivedrab"), pch = c(1, 3))
+par(new = TRUE)
+plot(Ds, n_atrisk[-length(n_atrisk)], pch = 2, col = "darkorchid",
+     axes = FALSE, xlab = "", ylab = "")
+if(save_plots) dev.off()
+

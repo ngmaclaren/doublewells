@@ -184,6 +184,19 @@ choose_sentinels <- function(g, n, v = V(g)) {
     V(g)[nodes]
 }
 
+sentinel_ranking <- function(g, x, n = 5) {
+    "Based on the graph, g, and the states of nodes, x, rank the nodes and return a set of n sentinel nodes."
+    ## determine which nodes are in the lower state
+    avail <- V(g)[which(lowerstate(x) == 1)]
+    ## for each node i in the lower state, calculate a ranking that is the sum of the states of all adjacent nodes. <-- This isn't what I was talking about in the meeting, but I believe it is closer to Naoki's original idea.
+    ranks <- sapply(avail, function(v) sum(x[neighbors(g, v)]))
+    ## sort that vector of ranks
+    df <- data.frame(avail = as.numeric(avail), ranks)
+    df <- df[order(df$ranks, decreasing = TRUE), ]
+    ## return a vector of nodes (class igraph.vs), choosing the top n to be the sentinel nodes.
+    V(g)[df$avail[1:n]]
+}
+
 ## Counting Functions
 upperstate <- function(x, cutoff = 7) {
     "A counting function: return 1 if the node is in the upper state (currently x_i = 7), and zero otherwise."
