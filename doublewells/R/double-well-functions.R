@@ -123,10 +123,10 @@ Iadj <- function(X, A, t = NULL, nsteps = NULL, times = NULL) {
     (N/W)*(numerator/denomenator)
 }
 
-sampled_eigenmethod <- function(X, A, samples, nodes, var_only = FALSE) {
+sampled_eigenmethod <- function(X, samples, nodes, var_only = FALSE) {#A, 
     "From an output matrix, X, with connections between x_i given in A, take X at `samples` time steps, make a covariance matrix from that data, and return the dominant eigenvalue of the covariance matrix."
     X <- X[samples, nodes]
-    A <- A[nodes, nodes] # why?
+    ##A <- A[nodes, nodes] # why?
     C <- cov(X)
     if(var_only) {
         C[lower.tri(C) | upper.tri(C)] <- 0
@@ -141,9 +141,9 @@ sampled_MoranI <- function(X, A, nodes, t) {
 }
 
 sampled_sdmethod <- function(X, t, wl) {
-    "Calculate the standard deviation sd(x_i) for output matrix, X, over the time steps in a window. Time step `t` is the last step of the window, with the window calculated `(wl + 1):t`."
+    "Calculate the standard deviation sd(x_i) for output matrix, X, over the time steps in a window. Time step `t` is the last step of the window, with the window calculated `(t - wl + 1):t`."
     if(!is.matrix(X)) {
-        return(sd(X[(wl+1):t]))
+        return(sd(X[(t - wl + 1):t]))
     } else return(apply(X[(wl+1):t, ], 2, sd))
 }
 
@@ -189,11 +189,22 @@ sentinel_ranking <- function(g, x, n = 5) {
     ## determine which nodes are in the lower state
     avail <- V(g)[which(lowerstate(x) == 1)]
     ## for each node i in the lower state, calculate a ranking that is the sum of the states of all adjacent nodes. <-- This isn't what I was talking about in the meeting, but I believe it is closer to Naoki's original idea.
+    ## ↓ ranks nodes only on their present state, i.e. at t = T
     ranks <- sapply(avail, function(v) sum(x[neighbors(g, v)]))
     ## sort that vector of ranks
     df <- data.frame(avail = as.numeric(avail), ranks)
     df <- df[order(df$ranks, decreasing = TRUE), ]
     ## return a vector of nodes (class igraph.vs), choosing the top n to be the sentinel nodes.
+    V(g)[df$avail[1:n]]
+}
+
+sentinel_ranking_ts <- function(g, X, t, wl = 250, n = 5) {
+    "Choose `n` sentinel nodes in a graph `g` based on the AVERAGE state of the x_i in `X` over the time step window, length `wl`, ending at `t`."
+    avail <- V(g)[which(lowerstate(x) == 1)]
+    ## ↓ ranks nodes on their average state over the window
+    ranks <- colMeans(X[(t - wl + 1):t, avail])
+    df <- data.frame(avail = as.numeric(avail), ranks)
+    df <- df[order(df$ranks, decreasing = TRUE), ]
     V(g)[df$avail[1:n]]
 }
 

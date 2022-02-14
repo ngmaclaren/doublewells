@@ -10,7 +10,7 @@ export(
     "select_stressnode",
 
     ## Algorithm Support Functions
-    "choose_sentinels",
+    "choose_sentinels", "sentinel_ranking", "sentinel_ranking_ts",
 
     ## Counting Functions
     "upperstate", "lowerstate",

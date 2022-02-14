@@ -80,6 +80,7 @@ ssdeigvars <- numeric()
 
 new_ssds <- list()
 new_ssdeigs <- numeric()
+old_ssdeigs <- numeric()
 
 n_atrisk <- numeric()
 
@@ -106,11 +107,11 @@ while(length(atrisk) > cutoff) {
     ## The nodes that feed into the early warning indicators are contained in `atrisk`
     samples <- (wl+1):stepT
     ## Covariance matrix --> dominant eigenvalue
-    eig <- sampled_eigenmethod(X, A, samples = samples, nodes = atrisk)
-    fulleig <- sampled_eigenmethod(X, A, samples = samples, nodes = V(g))
+    eig <- sampled_eigenmethod(X, samples = samples, nodes = atrisk)
+    fulleig <- sampled_eigenmethod(X, samples = samples, nodes = V(g))
 
-    vareig <- sampled_eigenmethod(X, A, samples = samples, nodes = atrisk, var_only = TRUE)
-    fullvareig <- sampled_eigenmethod(X, A, samples = samples, nodes = V(g), var_only = TRUE)
+    vareig <- sampled_eigenmethod(X, samples = samples, nodes = atrisk, var_only = TRUE)
+    fullvareig <- sampled_eigenmethod(X, samples = samples, nodes = V(g), var_only = TRUE)
 
     ## testX <- X[samples, ]
     ## testA <- A
@@ -147,13 +148,16 @@ while(length(atrisk) > cutoff) {
         ## sentinels <- c(sentinels, choose_sentinels(g, n = n_new, v = available))
     }
     ssd <- sampled_sdmethod(X[, sentinels], t = stepT, wl = wl)
-    ssdeig <- sampled_eigenmethod(X, A, samples = samples, nodes = sentinels)
-    ssdeigvar <- sampled_eigenmethod(X, A, samples = samples, nodes = sentinels,
+    ssdeig <- sampled_eigenmethod(X, samples = samples, nodes = sentinels)
+    ssdeigvar <- sampled_eigenmethod(X, samples = samples, nodes = sentinels,
                                      var_only = TRUE)
 
-    new_sentinels <- sentinel_ranking(g, x, n = 5)
+    ##new_sentinels <- sentinel_ranking(g, x, n = 5)
+    old_sentinels <- sentinel_ranking(g, x, n = n_sentinels)
+    old_ssdeig <- sampled_eigenmethod(X, samples = samples, nodes = old_sentinels)
+    new_sentinels <- sentinel_ranking_ts(g, X, t = stepT, wl = wl, n = n_sentinels)
     new_ssd <- sampled_sdmethod(X[, new_sentinels], t = stepT, wl = wl)
-    new_ssdeig <- sampled_eigenmethod(X, A, samples = samples, nodes = new_sentinels)
+    new_ssdeig <- sampled_eigenmethod(X, samples = samples, nodes = new_sentinels)
     
     ## Debugging
     ## print(D)
@@ -173,6 +177,7 @@ while(length(atrisk) > cutoff) {
 
     new_ssds[[i]] <- new_ssd
     new_ssdeigs[i] <- new_ssdeig
+    old_ssdeigs[i] <- old_ssdeig
     
     Ds[i] <- D
     Us[i] <- u[stressnode]
@@ -284,3 +289,50 @@ plot(Ds, n_atrisk[-length(n_atrisk)], pch = 2, col = "darkorchid",
      axes = FALSE, xlab = "", ylab = "")
 if(save_plots) dev.off()
 
+
+## Kendall's Tau analysis
+df <- data.frame(
+    Ds = Ds,
+    n_atrisk = n_atrisk[-length(n_atrisk)],
+    sentinel_eig = log(new_ssdeigs),
+    old_sentinel_eig = log(old_ssdeigs),
+    reduced_I = moranIs,
+    full_I = fullIs,
+    reduced_eig = log(eigs),
+    reduced_var_eig = log(vareigs),
+    full_eig = log(fulleigs)
+)
+
+ag <- df %>% dplyr::group_by(n_atrisk) %>%
+    dplyr::summarize(
+               D = mean(Ds),
+               n = dplyr::n_distinct(sentinel_eig),
+               sentinel_eig = cor(Ds, sentinel_eig, method = "kendall"),
+               old_sentinel_eig = cor(Ds, old_sentinel_eig, method = "kendall"),
+               reduced_I = cor(Ds, reduced_I, method = "kendall"),
+               full_I = cor(Ds, full_I, method = "kendall"),
+               reduced_eig = cor(Ds, reduced_eig, method = "kendall"),
+               reduced_var_eig = cor(Ds, reduced_var_eig, method = "kendall"),
+               full_eig = cor(Ds, full_eig, method = "kendall")
+           ) %>%
+    dplyr::arrange(-n)
+
+columns <- colnames(ag[, -(1:3)])
+xlim <- rev(range(ag$n))
+ylim <- range(ag[, columns], na.rm = TRUE)
+##palette(rainbow(length(columns)))
+palette(rainbow(length(columns)))
+
+for(i in 1:length(columns)) {
+    dev.new()
+    plot(ag[, c("n", columns[i])], type = "p", pch = 19, cex = 1.5, lwd = 1.5, col = i,
+         xlim = xlim, ylim = ylim, xlab = "# Steps in Stable State", ylab = expression(tau),
+         main = columns[i])
+}
+
+## dev.new(width = 9, height = 7)
+## par(mar = c(5, 4, 4, 10), xpd = TRUE)
+## matplot(ag$n_atrisk, ag[, columns], type = "p", pch = 1:length(columns), cex = 1.5, lwd = 1.5,
+##         xlim = xlim, ylim = ylim, xlab = "# Steps in Stable State", ylab = expression(tau))
+## legend("bottomright", legend = columns, pch = 1:length(columns), col = 1:length(columns),
+##        bty = "n", inset = c(-0.3, 0))
