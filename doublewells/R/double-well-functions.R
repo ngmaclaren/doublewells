@@ -13,8 +13,7 @@ double_well <- function(x, r1, r2, r3, dt, noise = NULL, stress = 0) {
 }
 
 double_well_coupled <- function(x, r1, r2, r3, D, A, dt, noise = NULL, stress = rep(0, length(x))) {
-    "Calculates the next step in a double well simulation assuming full determinism and network-based coupling. Variables are as for `double_well`, with `x` a row vector of current states, D as the coupling strength, and A as the adjacency matrix. The `noise` argument if not NULL should be a function that generates a vector of random values of length equal to the length of x."
-    ## x is now a row vector
+    "Calculates the next step in a double well simulation and network-based coupling. Variables are as for `double_well`, with `x` a row vector of current states, D as the coupling strength, and A as the adjacency matrix. The `noise` argument if not NULL should be a function that generates a vector of random values of length equal to the length of x."
     if(is.null(noise)) {
         deltax <- (-(x - r1)*(x - r2)*(x - r3) + D*colSums(A*x) + stress)*dt
     } else {
@@ -145,6 +144,16 @@ sampled_sdmethod <- function(X, t, wl) {
     if(!is.matrix(X)) {
         return(sd(X[(t - wl + 1):t]))
     } else return(apply(X[(wl+1):t, ], 2, sd))
+}
+
+sampled_acmethod <- function(X, t, wl, lag = 1) {
+    "Calculate the correlation between x_{i, t0:t} with itself at some lag, x_{i, (t0-lag):(t-lag). Time step `t` is the last step of the window, with the window calculated such that `t0` = t - wl + 1."
+    t0 <- t - wl + 1
+    if(!is.matrix(X)) {
+        cor(x[t0:t], x[(t0 - lag):(t - lag)])
+    } else {
+        apply(X, 2, function(x) cor(x[t0:t], x[(t0 - lag):(t - lag)]))
+    }
 }
 
 ## Helper Functions

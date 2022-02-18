@@ -62,7 +62,7 @@ if(which_param == "u") {
 ## Simulation Parameters
 cutoff <- .25*nnodes
 atrisk <- V(g)
-stepT <- 500
+stepT <- 5000
 wl <- 250#.5*stepT
 n_sentinels <- 5
 sentinels <- choose_sentinels(g, n = n_sentinels)

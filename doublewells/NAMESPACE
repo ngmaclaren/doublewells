@@ -4,7 +4,7 @@ export(
 
     ## Early Warnings
     "windowed_sdmethod", "windowed_lagmethod", "windowed_acmethod", "Iadj",
-    "sampled_eigenmethod", "sampled_MoranI", "sampled_sdmethod",
+    "sampled_eigenmethod", "sampled_MoranI", "sampled_sdmethod", "sampled_acmethod",
 
     ## Helper Functions
     "select_stressnode",
