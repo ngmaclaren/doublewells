@@ -1,5 +1,7 @@
 ## Code by Neil MacLaren 2/15/2022
 
+## Update with new parameter settings and integration/simulation/observation style
+
 library(igraph)
 library(doublewells)
 MoranI <- ape::Moran.I
@@ -41,21 +43,33 @@ D <- 0.21 # connection strength
 p <- if(s > 0) 3*s else 0.015 # perturbation strength
 u <- rep(0, nnodes) # stress vector
 
-dt <- 0.01
+τ <- 75 # duration in time units
+dt <- 0.01 # step size for integration
+T <- τ/dt
 
-initialx <- rep(1, nnodes) + noise(nnodes, s)
-x <- initialx
+initialx <- rep(1, nnodes) + noise(nnodes, s) # initial values of x_i
+
+nsamples <- 250 # number of samples for early warning indicators
+sample_spacing <- .1 # in τ scale
+sample_spacing <- sample_spacing/dt # in Δt scale
+samples <- seq(T, T - (nsamples*sample_spacing), by = -sample_spacing) # vector of indices to sample
+
+lag <- .1 # lag for autocorrelation, τ scale
+lag <- lag/dt # lag for autocorrelation, Δt scale
+
+n_sentinels <- 5 # set the number of sentinel nodes
 
 ## Simulation Parameters
-stepsize <- 1e-3 
-cutoff <- .25*nnodes
-in_lowerstate <- V(g)
-stepT <- 5000
-wl <- 250
-samples <- (stepT - wl + 1):stepT
-n_lowerstate <- numeric()
-n_sentinels <- 5
-Ds <- numeric()
+x <- initialx # an updating vector of x_i
+
+stepsize <- 1e-3 # for incrementing D
+cutoff <- .25*nnodes # to stop simulation
+in_lowerstate <- V(g) # initial vector of nodes in the lower state (all of them)
+##stepT <- 5000
+##wl <- 250
+##samples <- (stepT - wl + 1):stepT
+n_lowerstate <- numeric() # storage vector for the number of nodes in the lower state
+Ds <- numeric() # storage vector for the state of the bifurcation parameter
 
 ## Storage vectors for all early warning indicators
 maxeig <- list(all = numeric(), lower = numeric(), sentinel = numeric())
@@ -68,9 +82,10 @@ avgac <- list(all = numeric(), lower = numeric(), sentinel = numeric())
 ## Main Loop
 i <- 1
 while(length(in_lowerstate) > cutoff) {
-    X <- matrix(0, nrow = stepT, ncol = nnodes)
+    X <- matrix(0, nrow = T, ncol = nnodes) # storage matrix for the integration step states of x
 
-    for(t in 1:stepT) {
+    ## Integration
+    for(t in 1:T) {
         X[t, ] <- x
         x <- double_well_coupled(x, r[1], r[2], r[3], D, A, dt, noise(nnodes, s), u)
     }
@@ -83,7 +98,7 @@ while(length(in_lowerstate) > cutoff) {
     n_lowerstate[i] <- length(in_lowerstate)
 
     ## Determine sentinels
-    sentinels <- sentinel_ranking_ts(g, X, t = stepT, wl = wl, n = n_sentinels)
+    sentinels <- sentinel_ranking_ts(g, X, samples, n = n_sentinels)
 
     X.all <- X[samples, ]
     X.lower <- X[samples, in_lowerstate]
@@ -109,9 +124,9 @@ while(length(in_lowerstate) > cutoff) {
     } else moranI$sentinel[i] <- NA
 
     ac <- list()
-    ac$all <- sampled_acmethod(X, stepT, wl, lag = 1)
-    ac$lower <- sampled_acmethod(X[, in_lowerstate], stepT, wl, lag = 1)
-    ac$sentinel <- sampled_acmethod(X[, sentinels], stepT, wl, lag = 1)
+    ac$all <- sampled_acmethod(X, samples, lag = lag)
+    ac$lower <- sampled_acmethod(X[, in_lowerstate], samples, lag = lag)
+    ac$sentinel <- sampled_acmethod(X[, sentinels], samples, lag = lag)
 
     for(j in 1:length(ac)) maxac[[j]][i] <- max(ac[[j]])
     for(j in 1:length(ac)) avgac[[j]][i] <- mean(ac[[j]])
@@ -123,7 +138,7 @@ while(length(in_lowerstate) > cutoff) {
     i <- i + 1
 }
 
-## May need to adjust column names here
+## Convert lists to data frames
 maxeig <- do.call(cbind, maxeig)
 colnames(maxeig) <- paste("maxeig", colnames(maxeig), sep = "_")
 maxsd <- do.call(cbind, maxsd)
@@ -181,43 +196,11 @@ for(i in 1:length(ewis)) {
             pch = 1, col = 1:length(figcols), cex = 1.5,
             lwd = 1.5, lty = 1,
             xlab = "# Steps in Steady State", ylab = expression(tau),
-            xlim = rev(range(kendalls$n_steps)), ylim = c(-.3, 1))
-    legend("topright", bty = "n",# inset = c(-0.29, 0),
+            xlim = rev(range(kendalls$n_steps)), ylim = c(0, 1))
+    legend("bottomleft", bty = "n",# inset = c(-0.29, 0),
            legend = figcols, col = 1:length(figcols), pch = 1, pt.cex = 1.5, pt.lwd = 1.5)
 }
 if(save_plots) dev.off()
 
 as.matrix(round(colMeans(kendalls[, columns], na.rm = TRUE), 3))
 
-### Old code below here ### 
-
-## agg <- data.frame(n_lowerstate = unique(df$n_lowerstate))
-
-
-
-
-
-
-## for(col in columns) {
-##     ag <- aggregate(
-##         df[, col], by = list(n_lowerstate = df[, "n_lowerstate"]),
-##         function(x) {
-##             cor(df[, "Ds"], x, method = "kendall", use = "pairwise.complete.obs"))
-##     colnames(ag)[2] <- col
-##     agg <- merge(agg, ag, by = "n_lowerstate")
-## }
-
-    
-
-## apply(df[, columns], 2, function(x) cor(Ds
-
-## for(i in 1:length(columns)) {
-    
-
-## ## Finish this after confirm column names above
-## agg <- df %>% group_by(n_lowerstate) %>%
-##     summarize(
-##         D = mean(Ds),
-##         n = n_distinct(Ds)
-##     )
-        

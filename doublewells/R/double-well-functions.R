@@ -139,20 +139,19 @@ sampled_MoranI <- function(X, A, nodes, t) {
     ape::Moran.I(X[t, nodes], A[nodes, nodes])$observed
 }
 
-sampled_sdmethod <- function(X, t, wl) {
+sampled_sdmethod <- function(X, samples) {
     "Calculate the standard deviation sd(x_i) for output matrix, X, over the time steps in a window. Time step `t` is the last step of the window, with the window calculated `(t - wl + 1):t`."
     if(!is.matrix(X)) {
-        return(sd(X[(t - wl + 1):t]))
-    } else return(apply(X[(wl+1):t, ], 2, sd))
+        return(sd(X[samples]))
+    } else return(apply(X[samples, ], 2, sd))
 }
 
-sampled_acmethod <- function(X, t, wl, lag = 1) {
+sampled_acmethod <- function(X, samples, lag = 1) {
     "Calculate the correlation between x_{i, t0:t} with itself at some lag, x_{i, (t0-lag):(t-lag). Time step `t` is the last step of the window, with the window calculated such that `t0` = t - wl + 1."
-    t0 <- t - wl + 1
     if(!is.matrix(X)) {
-        cor(x[t0:t], x[(t0 - lag):(t - lag)])
+        cor(x[samples], x[samples - lag])
     } else {
-        apply(X, 2, function(x) cor(x[t0:t], x[(t0 - lag):(t - lag)]))
+        apply(X, 2, function(x) cor(x[samples], x[samples - lag]))
     }
 }
 
@@ -207,11 +206,11 @@ sentinel_ranking <- function(g, x, n = 5) {
     V(g)[df$avail[1:n]]
 }
 
-sentinel_ranking_ts <- function(g, X, t, wl = 250, n = 5) {
+sentinel_ranking_ts <- function(g, X, samples, n = 5) {
     "Choose `n` sentinel nodes in a graph `g` based on the AVERAGE state of the x_i in `X` over the time step window, length `wl`, ending at `t`."
     avail <- V(g)[which(lowerstate(x) == 1)]
     ## ↓ ranks nodes on their average state over the window
-    ranks <- colMeans(X[(t - wl + 1):t, avail])
+    ranks <- colMeans(X[samples, avail])
     df <- data.frame(avail = as.numeric(avail), ranks)
     df <- df[order(df$ranks, decreasing = TRUE), ]
     V(g)[df$avail[1:n]]
