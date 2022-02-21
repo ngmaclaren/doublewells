@@ -5,7 +5,7 @@
 library(igraph)
 library(doublewells)
 MoranI <- ape::Moran.I
-
+    
 ##set.seed(123)
 
 save_plots <- FALSE
