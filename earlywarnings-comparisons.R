@@ -6,40 +6,29 @@ library(igraph)
 library(doublewells)
 MoranI <- ape::Moran.I
     
-##set.seed(123)
+set.seed(123)
 
-save_plots <- FALSE
+save_plots <- TRUE
 
-## Graph Selection
-generate_new <- FALSE
-use_empirical <- FALSE
-which_network <- "mine" # "jpr" "surfers"
-if(generate_new) {
-    nnodes <- 100
-    outdist <- c(0, .6, .5, .4, .3, .2, .1, .05)
-    g <- sample_pa(nnodes, power = 1.5, out.dist = outdist, directed = FALSE)
-    write_graph(g, "./data/testgraph-BA.gml", format = "gml")
-} else if(!use_empirical) {
-    g <- read_graph("./data/testgraph-BA.gml", format = "gml")
-    nnodes <- vcount(g)
-} else if(which_network == "mine") {
-    data("mine", package = "networkdata")
-    g <- mine
-} else if(which_network == "jpr") {
-    data("jpr", package = "networkdata")
-    g <- jpr
-} else if(which_network == "surfers") {
-    data("surfersb", package = "networkdata")
-    g <- surfersb
-}
+### Graph Selection
+## pref_attach, max_entropy, sphere_surface, me_islands, random_regular, small_world
+## mine, jpr, pira, sn_auth;;; mine went to D = 1.044?!
+## computational cost of "petster" ~1800 nodes in petster GCC is too much
+choice <- "max_entropy"
+data(list = choice)
+g <- get(choice)
 
-    
+nnodes <- vcount(g)
 A <- as_adj(g, type = "both", sparse = FALSE)
 
-## Node Systems
+### Node Systems
 r <- c(1, 4, 7) # double well parameters
 s <- 0.005 # sd of noise process
-D <- 0.21 # connection strength
+if(choice %in% c("pref_attach", "jpr")) {# connection strength
+    D <- 0.20
+} else if(choice %in% c("small_world", "random_regular")) {
+    D <- 0.7
+} else D <- 0.5
 p <- if(s > 0) 3*s else 0.015 # perturbation strength
 u <- rep(0, nnodes) # stress vector
 
@@ -59,11 +48,11 @@ lag <- lag/dt # lag for autocorrelation, Δt scale
 
 n_sentinels <- 5 # set the number of sentinel nodes
 
-## Simulation Parameters
+### Simulation Parameters
 x <- initialx # an updating vector of x_i
 
 stepsize <- 1e-3 # for incrementing D
-cutoff <- .25*nnodes # to stop simulation
+cutoff <- .1*nnodes # to stop simulation
 in_lowerstate <- V(g) # initial vector of nodes in the lower state (all of them)
 ##stepT <- 5000
 ##wl <- 250
@@ -79,7 +68,7 @@ moranI <- list(all = numeric(), lower = numeric(), sentinel = numeric())
 maxac <- list(all = numeric(), lower = numeric(), sentinel = numeric())
 avgac <- list(all = numeric(), lower = numeric(), sentinel = numeric())
 
-## Main Loop
+### Main Loop
 i <- 1
 while(length(in_lowerstate) > cutoff) {
     X <- matrix(0, nrow = T, ncol = nnodes) # storage matrix for the integration step states of x
@@ -93,6 +82,7 @@ while(length(in_lowerstate) > cutoff) {
     ## Exit condition
     in_lowerstate <- V(g)[which(lowerstate(x) == 1)]
     if(length(in_lowerstate) <= cutoff) break
+    if(length(in_lowerstate) < n_sentinels) break
 
     ## Else, store the number of "at risk" nodes and continue
     n_lowerstate[i] <- length(in_lowerstate)
@@ -118,7 +108,9 @@ while(length(in_lowerstate) > cutoff) {
     avgsd$sentinel[i] <- mean(apply(X.sentinels, 2, sd))
 
     moranI$all[i] <- MoranI(x, A)$observed
-    moranI$lower[i] <- MoranI(x[in_lowerstate], A[in_lowerstate, in_lowerstate])$observed
+    if(is_connected(induced_subgraph(g, V(g)[in_lowerstate]))) {
+        moranI$lower[i] <- MoranI(x[in_lowerstate], A[in_lowerstate, in_lowerstate])$observed
+    } else moranI$lower[i] <- NA
     if(ecount(induced_subgraph(g, sentinels)) > 0) {
         moranI$sentinel[i] <- MoranI(x[sentinels], A[sentinels, sentinels])$observed
     } else moranI$sentinel[i] <- NA
@@ -177,17 +169,22 @@ kendalls <- kendalls[kendalls$n_steps > 15, ]
 
 ## Plot results
 kendalls <- kendalls[order(kendalls$n_steps), ]
+as.matrix(round(colMeans(kendalls[, columns], na.rm = TRUE), 3))
+vcount(g)
+edge_density(g)
 
+ht <- 7
+wd <- 14
 if(save_plots) {
-    pdf("./img/rough-comparison.pdf", width = 8, height = 7)
-} else dev.new(width = 20, height = 4)
+    pdf(paste0("./img/", choice, "-rough-comparison.pdf"), width = wd, height = ht)
+} else dev.new(width = wd, height = ht)
 ##figcols <- columns[-grep("moran", columns)]
 ##palette(rainbow(length(figcols)))
 ewis <- c("maxeig", "maxsd", "avgsd", "maxac", "avgac")
 par(
     mar = c(5, 4, 4, 4),#8),
     xpd = TRUE,
-    mfrow = c(1, length(ewis))
+    mfrow = c(2, 3)#length(ewis))
 )
 for(i in 1:length(ewis)) {
     figcols <- columns[grep(ewis[i], columns)]
@@ -202,5 +199,34 @@ for(i in 1:length(ewis)) {
 }
 if(save_plots) dev.off()
 
-as.matrix(round(colMeans(kendalls[, columns], na.rm = TRUE), 3))
+ht <- 5
+wd <- 10
+if(save_plots) {
+    pdf(paste0("./img/", choice, "-overview.pdf"), height = ht, width = wd)
+} else dev.new(width = wd, height = ht)
+par(mfrow = c(1, 2))
+plot(g, vertex.label = "", vertex.size = 3)
+hist(degree(g), main = "", xlab = "Degree", ylab = "Frequency", breaks = 20)
+if(save_plots) dev.off()
 
+wd <- 15
+ht <- 5
+if(save_plots) {
+    pdf(paste0("./img/", choice, "-earlywarnings.pdf"), width = wd, height = ht)
+} else dev.new(width = wd, height = 5)
+par(mar = c(5, 4, 4, 13), xpd = TRUE)
+## some stuff to plot the early warning indicator(s) over time
+ewi <- "avgac"
+columns <- colnames(df)[grep(ewi, colnames(df))]
+colors <- c("sienna", "navy", "olivedrab")
+matplot(df$Ds, df[, columns], type = "p", pch = c(1, 3, 4), lwd = 1, col = colors,
+        xlab = "D", ylab = "Early Warning Indicator Value")
+legend("bottomright", bty = "n", inset = c(-0.21, 0),
+       legend = c(columns, "# Nodes"),
+       pch = c(1, 3, 4, 2), col = c(colors, "darkorchid"))
+par(new = TRUE)
+plot(df$Ds, df$n_lowerstate, pch = 2, lwd = 2, col = "darkorchid",
+     axes = FALSE, xlab = "", ylab = "")
+axis(4, at = pretty(range(df$n_lowerstate)))
+mtext("# Nodes in Lower State", side = 4, cex = 1, font = 1, line = 3)
+if(save_plots) dev.off()

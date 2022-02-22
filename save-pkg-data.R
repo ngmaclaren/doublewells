@@ -31,6 +31,15 @@ generate_network <-
            )
 }
 
+get_gcc <- function(g) {
+    require(igraph)
+    comps <- components(g)
+    gcc_id <- which.max(comps$csize)
+    vids <- V(g)[comps$membership == gcc_id]
+    g <- induced_subgraph(g, vids)
+    g
+}
+
 ## Random Graphs
 
 graphs <- c("random_regular", "max_entropy", "sphere_surface",
@@ -46,12 +55,16 @@ for(i in 1:length(graphs)) {
 
 ## Empirical Networks
 
-empiricals <- c("mine", "jpr", "surfersb")
+empiricals <- c("mine", "jpr", "sn_auth", "petster", "covert_38")
 data(list = empiricals)
+
+## Get GCCs
+sn_auth <- get_gcc(sn_auth)
+petster <- get_gcc(petster)
+pira <- get_gcc(covert_38[[1]])
+empiricals[which(empiricals == "covert_38")] <- "pira"
 
 for(i in 1:length(empiricals)) {
     filename <- paste0(fileloc, empiricals[i], ".rda")
     save(list = c(empiricals[i]), file = filename)
 }
-
-
