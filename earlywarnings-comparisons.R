@@ -6,26 +6,32 @@ library(igraph)
 library(doublewells)
 MoranI <- ape::Moran.I
     
-set.seed(123)
+##set.seed(123)
 
-save_plots <- TRUE
+save_plots <- FALSE
 
 ### Graph Selection
 ## pref_attach, max_entropy, sphere_surface, me_islands, random_regular, small_world
 ## mine, jpr, pira, sn_auth;;; mine went to D = 1.044?!
 ## computational cost of "petster" ~1800 nodes in petster GCC is too much
-choice <- "max_entropy"
-data(list = choice)
-g <- get(choice)
+choice <- "pref_attach"
+if(choice %in% c("dolphins", "netscience-lcc", "lfr-n100k6-decayrate")) {
+    filename <- paste0("./data/", choice, ".mat")
+    edgelist <- as.matrix(read.table(file = filename, header = FALSE, sep = " ", skip = 1)[, 1:2])
+    g <- graph_from_edgelist(edgelist, directed = FALSE)
+} else {
+    data(list = choice)
+    g <- get(choice)
+}
 
 nnodes <- vcount(g)
 A <- as_adj(g, type = "both", sparse = FALSE)
 
 ### Node Systems
 r <- c(1, 4, 7) # double well parameters
-s <- 0.005 # sd of noise process
-if(choice %in% c("pref_attach", "jpr")) {# connection strength
-    D <- 0.20
+s <- 0.005 # sd of noise process; 0.005 for production
+if(choice %in% c("pref_attach", "jpr", "lfr-n100k6-decayrate")) {# connection strength
+    D <- 0.24 # production value is 0.20
 } else if(choice %in% c("small_world", "random_regular")) {
     D <- 0.7
 } else D <- 0.5
@@ -38,12 +44,12 @@ T <- τ/dt
 
 initialx <- rep(1, nnodes) + noise(nnodes, s) # initial values of x_i
 
-nsamples <- 250 # number of samples for early warning indicators
+nsamples <- 250 # number of samples for early warning indicators; 250 for production
 sample_spacing <- .1 # in τ scale
 sample_spacing <- sample_spacing/dt # in Δt scale
 samples <- seq(T, T - (nsamples*sample_spacing), by = -sample_spacing) # vector of indices to sample
 
-lag <- .1 # lag for autocorrelation, τ scale
+lag <- .1 # lag for autocorrelation, τ scale; .1 for production; .2 is better, and .3 and .5
 lag <- lag/dt # lag for autocorrelation, Δt scale
 
 n_sentinels <- 5 # set the number of sentinel nodes
@@ -52,7 +58,7 @@ n_sentinels <- 5 # set the number of sentinel nodes
 x <- initialx # an updating vector of x_i
 
 stepsize <- 1e-3 # for incrementing D
-cutoff <- .1*nnodes # to stop simulation
+cutoff <- .1*nnodes # to stop simulation; production value is .1
 in_lowerstate <- V(g) # initial vector of nodes in the lower state (all of them)
 ##stepT <- 5000
 ##wl <- 250
@@ -163,7 +169,7 @@ kendalls$n_lowerstate <- as.integer(rownames(kendalls))
 kendalls$n_steps <- sapply(dfsplit, nrow)
 
 ## discard minor transitions
-kendalls <- kendalls[kendalls$n_steps > 15, ]
+kendalls <- kendalls[kendalls$n_steps > 15, ] # 15 for production 
                                         #floor(quantile(kendalls$n_steps, probs = .75)), ]
                                         #mean(kendalls$n_steps)), ]
 

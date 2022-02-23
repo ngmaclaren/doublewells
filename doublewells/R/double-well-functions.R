@@ -38,6 +38,17 @@ harvestmodel <- function(x, r, K, cp, h, dt, s, noise = FALSE) {
     nextx
 }
 
+metapopulation <- function(x, K, h, A, D, dt = 0.01, noise = NULL) {
+    "From Weinans et al 2019. x_i is the abundance at node i, K_i the carrying capacity, h_i the maximum harvesting rate (c in Weinans), d_ij is migration between i and j (symmetric). In Weinans et al, the noise process σ_xi*dW_i is a Wiener process (i.e., Gaussian noise) with mean 0 and variance σ. Weinans et al parameter settings assumed three patches with K_i = [10 13 8], c_i = [3, 2, 2.3], d = [[0, .2, .08] [.2 .08 0] [.08 .08 0] ]. x (N in Weinans), K, and c are vectors, A a symmetric adjacency matrix weighted by a connection parameter D."
+    N <- length(x)
+    Current <- A*matrix(rep(x, times = N), byrow = FALSE, nrow = N)
+    Change <- A*matrix(rep(x, times = N), byrow = TRUE, ncol = N)
+    Dispersal <- colSums(D*(Current - Change))
+    deltax <- (x*(1 - (x/K)) - ((h*(x^2))/(1 + (x^2))) + Dispersal)*dt + noise
+    nextx <- x + deltax
+    nextx
+}
+
 noise <- function(n, s, f = rnorm) {
     "A function to generate `n` random noise values from a distribution with standard deviation `s`. Currently set up only for Gaussian noise, but could be expanded to support more distributions."
     f(n, 0, s)
