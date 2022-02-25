@@ -1,7 +1,5 @@
 ## Code by Neil MacLaren 2/15/2022
 
-## Update with new parameter settings and integration/simulation/observation style
-
 library(igraph)
 library(doublewells)
 MoranI <- ape::Moran.I

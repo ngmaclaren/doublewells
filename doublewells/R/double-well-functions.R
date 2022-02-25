@@ -194,6 +194,63 @@ select_stressnode <- function(g, add_stress_to = NULL) {
     }
 }
 
+get_gcc <- function(g) {
+    require(igraph)
+    comps <- components(g)
+    gcc_id <- which.max(comps$csize)
+    vids <- V(g)[comps$membership == gcc_id]
+    g <- induced_subgraph(g, vids)
+    g
+}
+
+CVk <- function(g) {
+    k <- degree(g)
+    sd(k)/mean(k)
+}
+
+checks <- function(g) {
+    cat("Directed: ", is_directed(g), "\n",
+        "Weighted: ", is_weighted(g), "\n",
+        "Simple: ", is_simple(g), "\n",
+        "Bipartite: ", is_bipartite(g), "\n",
+        "N Nodes: ", vcount(g), "\n",
+        "N Edges: ", ecount(g), "\n",
+        "CV_k: ", CVk(g), "\n",
+        "Size of GCC: ", vcount(get_gcc(g)), "\n")
+}
+
+checkplot <- function(g) plot(g, vertex.label = "", vertex.size = 3)
+
+## Random Networks
+generate_network <-
+    function(choice = c("random_regular", "max_entropy", "sphere_surface",
+                        "me_islands", "pref_attach", "small_world"),
+             nnodes = 100, cprob = .06,
+             rr.k = 6,
+             sph.dim = 3, sph.radius = .279,
+             nislands = 5, nbridges = 1,
+             pa.power = 1.5,
+             pa.outdist = c(0, 10, (8+1/3), (6+2/3), 5, (3+1/3), (1+2/3), (5/6))*cprob,
+             sw.dim = 1, sw.nei = 3, sw.p = .1)
+{
+    require(igraph)
+    
+    choice <- match.arg(choice)
+    
+    switch(choice,
+           random_regular = sample_k_regular(nnodes, rr.k),
+           max_entropy = sample_gnp(nnodes, cprob),
+           sphere_surface = sample_dot_product(
+               sample_sphere_surface(dim = sph.dim, n = nnodes, radius = sph.radius)),
+           me_islands = sample_islands(
+               islands.n = nislands, islands.size = nnodes/nislands,
+               islands.pin = cprob*nislands * (100 - nbridges)/100,
+               n.inter = nbridges),
+           pref_attach = sample_pa(nnodes, power = pa.power, out.dist = pa.outdist, directed = FALSE),
+           small_world = sample_smallworld(dim = sw.dim, size = nnodes, nei = sw.nei, p = sw.p)
+           )
+}
+
 ## Algorithm Support Functions
 choose_sentinels <- function(g, n, v = V(g)) {
     "Choose `n` sentinel nodes in a graph `g` based on some criteria. Current criterion is only the degree of the node, checking for the `n` highest degree nodes in the list of available nodes,`v`."

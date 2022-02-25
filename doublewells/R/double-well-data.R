@@ -41,3 +41,8 @@ tothemiddle <- matrix(
       0, 1, 0),
     byrow = TRUE, nrow = 3
 )
+
+### A vector of names of empirical data sets stored in this package
+empiricals <- c("mine", "jpr", "sn_auth", "pira", "karate", "jazz",
+                "weaverbirds", "linux", "taro", "wiring",
+                "dolphins", "netsci")

@@ -1,13 +1,13 @@
 export(
     ## Models
-    "double_well", "double_well_coupled", "harvestmodel", "noise",# "load_network_model",
+    "double_well", "double_well_coupled", "harvestmodel", "metapopulation", "noise", "empiricals",
 
     ## Early Warnings
     "windowed_sdmethod", "windowed_lagmethod", "windowed_acmethod", "Iadj",
     "sampled_eigenmethod", "sampled_MoranI", "sampled_sdmethod", "sampled_acmethod",
 
     ## Helper Functions
-    "select_stressnode",
+    "select_stressnode", "get_gcc", "CVk", "checks", "checkplot",
 
     ## Algorithm Support Functions
     "choose_sentinels", "sentinel_ranking", "sentinel_ranking_ts",
