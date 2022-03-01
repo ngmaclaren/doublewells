@@ -1,6 +1,7 @@
 export(
     ## Models
     "double_well", "double_well_coupled", "harvestmodel", "metapopulation", "noise", "empiricals",
+    "mutualistic",
 
     ## Early Warnings
     "windowed_sdmethod", "windowed_lagmethod", "windowed_acmethod", "Iadj",

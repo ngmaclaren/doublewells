@@ -34,6 +34,7 @@ initialx <- rep(1, N) + noise(N, s)
 τ <- 100
 dt <- 0.001
 T <- τ/dt
+s <- s*sqrt(dt) 
 
 ## Main Loop
 x <- initialx

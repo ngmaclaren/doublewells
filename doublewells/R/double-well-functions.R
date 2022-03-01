@@ -38,13 +38,48 @@ harvestmodel <- function(x, r, K, cp, h, dt, s, noise = FALSE) {
     nextx
 }
 
+## metapopulation <- function(x, K, h, A, D, dt = 0.01, noise = NULL) {
+##     "From Weinans et al 2019. x_i is the abundance at node i, K_i the carrying capacity, h_i the maximum harvesting rate (c in Weinans), d_ij is migration between i and j (symmetric). In Weinans et al, the noise process σ_xi*dW_i is a Wiener process (i.e., Gaussian noise) with mean 0 and variance σ. Weinans et al parameter settings assumed three patches with K_i = [10 13 8], c_i = [3, 2, 2.3], d = [[0, .2, .08] [.2 .08 0] [.08 .08 0] ]. x (N in Weinans), K, and c are vectors, A a symmetric adjacency matrix weighted by a connection parameter D."
+##     N <- length(x)
+##     Current <- A*matrix(rep(x, times = N), byrow = FALSE, nrow = N)
+##     Change <- A*matrix(rep(x, times = N), byrow = TRUE, ncol = N)
+##     Dispersal <- colSums(D*(Current - Change))
+##     deltax <- (x*(1 - (x/K)) - ((h*(x^2))/(1 + (x^2))) + Dispersal)*dt + noise
+##     nextx <- x + deltax
+##     nextx
+## }
+
 metapopulation <- function(x, K, h, A, D, dt = 0.01, noise = NULL) {
     "From Weinans et al 2019. x_i is the abundance at node i, K_i the carrying capacity, h_i the maximum harvesting rate (c in Weinans), d_ij is migration between i and j (symmetric). In Weinans et al, the noise process σ_xi*dW_i is a Wiener process (i.e., Gaussian noise) with mean 0 and variance σ. Weinans et al parameter settings assumed three patches with K_i = [10 13 8], c_i = [3, 2, 2.3], d = [[0, .2, .08] [.2 .08 0] [.08 .08 0] ]. x (N in Weinans), K, and c are vectors, A a symmetric adjacency matrix weighted by a connection parameter D."
     N <- length(x)
-    Current <- A*matrix(rep(x, times = N), byrow = FALSE, nrow = N)
-    Change <- A*matrix(rep(x, times = N), byrow = TRUE, ncol = N)
-    Dispersal <- colSums(D*(Current - Change))
-    deltax <- (x*(1 - (x/K)) - ((h*(x^2))/(1 + (x^2))) + Dispersal)*dt + noise
+
+    x_i <- matrix(rep(x, nrow(A)), byrow = TRUE, nrow = nrow(A))
+    x_j <- matrix(rep(x, ncol(A)), byrow = FALSE, ncol = ncol(A))
+
+    ## Current <- A*matrix(rep(x, times = N), byrow = FALSE, nrow = N)
+    ## Change <- A*matrix(rep(x, times = N), byrow = TRUE, ncol = N)
+    ## Dispersal <- colSums(D*(Current - Change))
+    ## deltax <- (x*(1 - (x/K)) - ((h*(x^2))/(1 + (x^2))) + Dispersal)*dt + noise
+    deltax <- (x*(1 - (x/K)) - ((h*(x^2))/(1 + (x^2))) + D*colSums(A*(x_j - x_i)))*dt + noise
+    nextx <- x + deltax
+    nextx
+}
+
+mutualistic <- function(x, A, D, model_params = list(B = 0.1, K = 5, C = 1, E = 5, H = 0.9, I = 0.1),
+                        dt = 0.01, s = 0.01, noise = rnorm(length(x), mean = 0, sd = s*sqrt(dt))) {
+    "Ref is Kundu et al. 2022."
+    B <- model_params$B
+    K <- model_params$K
+    C <- model_params$C
+    E <- model_params$E
+    H <- model_params$H
+    I <- model_params$I
+
+    x_i <- matrix(rep(x, nrow(A)), byrow = TRUE, nrow = nrow(A))
+    x_j <- matrix(rep(x, ncol(A)), byrow = FALSE, ncol = ncol(A))
+    xi_xj <- (x_i*x_j)/(E + (H*x_i) + (I*x_j))
+        
+    deltax <- (B + x*((1 - (x/K))*((x/C) - 1)) + D*colSums(A*xi_xj))*dt + noise
     nextx <- x + deltax
     nextx
 }
