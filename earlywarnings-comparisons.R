@@ -4,7 +4,7 @@ library(igraph)
 library(doublewells)
 MoranI <- ape::Moran.I
     
-##set.seed(123)
+set.seed(123)
 
 save_plots <- FALSE
 
@@ -12,15 +12,17 @@ save_plots <- FALSE
 ## pref_attach, max_entropy, sphere_surface, me_islands, random_regular, small_world
 ## mine, jpr, pira, sn_auth;;; mine went to D = 1.044?!
 ## computational cost of "petster" ~1800 nodes in petster GCC is too much
-choice <- "pref_attach"
-if(choice %in% c("dolphins", "netscience-lcc", "lfr-n100k6-decayrate")) {
-    filename <- paste0("./data/", choice, ".mat")
-    edgelist <- as.matrix(read.table(file = filename, header = FALSE, sep = " ", skip = 1)[, 1:2])
-    g <- graph_from_edgelist(edgelist, directed = FALSE)
-} else {
-    data(list = choice)
-    g <- get(choice)
-}
+choice <- "dolphins"
+## if(choice %in% c("dolphins", "netscience-lcc", "lfr-n100k6-decayrate")) {
+##     filename <- paste0("./data/", choice, ".mat")
+##     edgelist <- as.matrix(read.table(file = filename, header = FALSE, sep = " ", skip = 1)[, 1:2])
+##     g <- graph_from_edgelist(edgelist, directed = FALSE)
+## } else {
+##     data(list = choice)
+##     g <- get(choice)
+## }
+data(list = choice)
+g <- get(choice)
 
 nnodes <- vcount(g)
 A <- as_adj(g, type = "both", sparse = FALSE)
@@ -28,11 +30,12 @@ A <- as_adj(g, type = "both", sparse = FALSE)
 ### Node Systems
 r <- c(1, 4, 7) # double well parameters
 s <- 0.005 # sd of noise process; 0.005 for production
-if(choice %in% c("pref_attach", "jpr", "lfr-n100k6-decayrate")) {# connection strength
-    D <- 0.24 # production value is 0.20
-} else if(choice %in% c("small_world", "random_regular")) {
-    D <- 0.7
-} else D <- 0.5
+## if(choice %in% c("pref_attach", "jpr", "lfr-n100k6-decayrate")) {# connection strength
+##     D <- 0.24 # production value is 0.20
+## } else if(choice %in% c("small_world", "random_regular")) {
+##     D <- 0.7
+## } else D <- 0.5
+D <- 0.2
 p <- if(s > 0) 3*s else 0.015 # perturbation strength
 u <- rep(0, nnodes) # stress vector
 
@@ -71,6 +74,7 @@ avgsd <- list(all = numeric(), lower = numeric(), sentinel = numeric())
 moranI <- list(all = numeric(), lower = numeric(), sentinel = numeric())
 maxac <- list(all = numeric(), lower = numeric(), sentinel = numeric())
 avgac <- list(all = numeric(), lower = numeric(), sentinel = numeric())
+sentinel_history <- list()
 
 ### Main Loop
 i <- 1
@@ -128,6 +132,7 @@ while(length(in_lowerstate) > cutoff) {
     for(j in 1:length(ac)) avgac[[j]][i] <- mean(ac[[j]])
 
     Ds[i] <- D
+    sentinel_history[[i]] <- sentinels
 
     ## Iterate
     D <- D + stepsize
@@ -147,6 +152,7 @@ maxac <- do.call(cbind, maxac)
 colnames(maxac) <- paste("maxac", colnames(maxac), sep = "_")
 avgac <- do.call(cbind, avgac)
 colnames(avgac) <- paste("avgac", colnames(avgac), sep = "_")
+sentinel_history <- do.call(rbind, sentinel_history)
 
 ## Analysis
 ## Goal is to compare Kendall's τ across each early warning indicator stored above.

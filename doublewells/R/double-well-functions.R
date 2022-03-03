@@ -311,6 +311,7 @@ sentinel_ranking <- function(g, x, n = 5) {
 
 sentinel_ranking_ts <- function(g, X, samples, n = 5) {
     "Choose `n` sentinel nodes in a graph `g` based on the AVERAGE state of the x_i in `X` over the time step window, length `wl`, ending at `t`."
+    x <- X[nrow(X), ]
     avail <- V(g)[which(lowerstate(x) == 1)]
     ## ↓ ranks nodes on their average state over the window
     ranks <- colMeans(X[samples, avail])
@@ -329,15 +330,143 @@ lowerstate <- function(x, cutoff = 2.5) {
     ifelse(x <= cutoff, 1, 0)
 }
 
+## Analysis
+simulation <- function(g # the network
+                     , r = c(1, 4, 7)
+                     , D.init = 0.2
+                     , s = 0.005 # noise intensity
+                     , nsamples = 250 # number of early warning indicator samples
+                     , stepsize = 1e-3
+                     , n_sentinels = 5
+                     , cutoff = .1*vcount(g)
+                     , TU = 75
+                     , dt = 0.01
+                       ) {
+    "This function simulates a multi-node double well system over increasing values of the connection strength, D, between nodes. It returns a data frame with the state of the system after each round of integration and the value of each early warning indicator in that iteration."
+    nnodes <- vcount(g)
+    A <- as_adj(g, type = "both", sparse = FALSE)
+
+    ## Node Systems
+    ##r <- c(1, 4, 7)
+    D <- D.init
+    u <- rep(0, nnodes) # stress vector, not used in this analysis so set to zero
+
+    ## Sim Params
+    τ <- TU#75 # time units
+    ##dt <- 0.01 # for integration
+    T <- τ/dt
+    ##s <- 0.005
+
+    ## Early Warnings Params
+    lag <- 0.1 # for autocorrelation
+    lag <- lag/dt
+
+    ##n_sentinels <- 5
+
+    ##nsamples <- 250
+    sample_spacing <- 0.1
+    sample_spacing <- sample_spacing/dt
+    samples <- seq(T, T - (nsamples*sample_spacing), by = -sample_spacing) # for all EWs
+
+    initialx <- rep(1, nnodes) + noise(nnodes, s)
+    x <- initialx
+
+    in_lowerstate <- V(g)
+    ##stepsize <- 1e-3 # for incrementing D --> set to 1e-3 for production
+    ##cutoff <- .1*nnodes # to stop simulation
+
+    ## Storage Vectors
+    n_lowerstate <- numeric()
+    Ds <- numeric()
+    maxeig <- list(all = numeric(), lower = numeric(), sentinel = numeric())
+    maxsd <- list(all = numeric(), lower = numeric(), sentinel = numeric())
+    avgsd <- list(all = numeric(), lower = numeric(), sentinel = numeric())
+    maxac <- list(all = numeric(), lower = numeric(), sentinel = numeric())
+    avgac <- list(all = numeric(), lower = numeric(), sentinel = numeric())
+    sentinel_history <- list()
+
+    ## Main Simulation Loop
+    i <- 1
+    while(length(in_lowerstate) > cutoff) {
+        X <- matrix(0, nrow = T, ncol = nnodes)
+
+        for(t in 1:T) {
+            X[t, ] <- x
+            x <- double_well_coupled(x, r[1], r[2], r[3], D, A, dt, noise(nnodes, s), u)
+        }
+
+        ## Exit condition
+        in_lowerstate <- V(g)[which(lowerstate(x) == 1)]
+        if(length(in_lowerstate) <= cutoff) break
+        if(length(in_lowerstate) < n_sentinels) break
+
+        ## Determine sentinels
+        sentinels <- sentinel_ranking_ts(g, X, samples, n = n_sentinels)
+
+        ## Calculate and Store
+        maxeig$all[i] <- sampled_eigenmethod(X, samples = samples, nodes = V(g))
+        maxeig$lower[i] <- sampled_eigenmethod(X, samples = samples, nodes = in_lowerstate)
+        maxeig$sentinel[i] <- sampled_eigenmethod(X, samples = samples, nodes = sentinels)
+
+        sds <- list()
+        sds$all <- apply(X[samples, ], 2, sd)
+        sds$lower <- apply(X[samples, in_lowerstate], 2, sd)
+        sds$sentinel <- apply(X[samples, sentinels], 2, sd)
+
+        for(j in 1:length(sds)) maxsd[[j]][i] <- max(sds[[j]])
+        for(j in 1:length(sds)) avgsd[[j]][i] <- mean(sds[[j]])
+
+        acs <- list()
+        acs$all <- sampled_acmethod(X, samples, lag = lag)
+        acs$lower <- sampled_acmethod(X[, in_lowerstate], samples, lag = lag)
+        acs$sentinel <- sampled_acmethod(X[, sentinels], samples, lag = lag)
+
+        for(j in 1:length(acs)) maxac[[j]][i] <- max(acs[[j]])
+        for(j in 1:length(acs)) avgac[[j]][i] <- mean(acs[[j]])
+
+        Ds[i] <- D
+        n_lowerstate[i] <- length(in_lowerstate)
+        sentinel_history[[i]] <- sentinels
+
+        ## Iterate
+        D <- D + stepsize
+        i <- i + 1
+    }
+
+
+    ## Convert lists to data frames
+    maxeig <- do.call(cbind, maxeig)
+    colnames(maxeig) <- paste("maxeig", colnames(maxeig), sep = "_")
+    maxsd <- do.call(cbind, maxsd)
+    colnames(maxsd) <- paste("maxsd", colnames(maxsd), sep = "_")
+    avgsd <- do.call(cbind, avgsd)
+    colnames(avgsd) <- paste("avgsd", colnames(avgsd), sep = "_")
+    maxac <- do.call(cbind, maxac)
+    colnames(maxac) <- paste("maxac", colnames(maxac), sep = "_")
+    avgac <- do.call(cbind, avgac)
+    colnames(avgac) <- paste("avgac", colnames(avgac), sep = "_")
+
+    sentinel_history <- do.call(rbind, sentinel_history)
+
+    ## Analysis
+    df <- data.frame(
+        n_lowerstate = n_lowerstate, # [-length(n_lowerstate)]
+        Ds = Ds
+    )
+    df <- cbind(df, maxeig, maxsd, avgsd, maxac, avgac)
+    
+    return(list(results = df, sentinels = sentinel_history))
+}
+
 ## Old functions
 
-double_well_gao <- function(x, r1, r2, r3, D, A, beta_eff, dt) {# beta_eff has to be calculated from A
-    "Calculates the next step in a double well simulation assuming full determinism and Gao method coupling. Variables are as for `double_well`, with D as the coupling strength, `beta_eff` and `x_eff` summarize the degree distribution of the network in different ways."
-    x_eff <- mean(rowSums(A)*t(x))/mean(rowSums(A))
-    deltax <- (-(x - r1)*(x - r2)*(x - r3) + D*beta_eff*x_eff)*dt
-    nextx <- x + deltax
-    nextx
-}
+## double_well_gao <- function(x, r1, r2, r3, D, A, beta_eff, dt) {# beta_eff has to be calculated from A
+##     "Calculates the next step in a double well simulation assuming full determinism and Gao method coupling. Variables are as for `double_well`, with D as the coupling strength, `beta_eff` and `x_eff` summarize the degree distribution of the network in different ways."
+##     x_eff <- mean(rowSums(A)*t(x))/mean(rowSums(A))
+##     deltax <- (-(x - r1)*(x - r2)*(x - r3) + D*beta_eff*x_eff)*dt
+##     nextx <- x + deltax
+##     nextx
+## }
 
 ## load_network_model <- function(empirical = FALSE, new = FALSE, network = "scale-free") {
 ##     "Generate or load a saved standard version of one of several network types or empirical networks. Because matching network density across the different random network models takes experimentation, all of these random network models have 100 nodes and appropriate parameters to support a target density of 0.06."

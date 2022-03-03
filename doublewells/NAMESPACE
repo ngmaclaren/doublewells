@@ -16,6 +16,9 @@ export(
     ## Counting Functions
     "upperstate", "lowerstate",
 
+    ## Analysis
+    "simulation",
+
     ## Pre-defined, named motifs
     "complete", "feedback", "feedforward", "fromthemiddleout", "linemotif", "tothemiddle"
 )
