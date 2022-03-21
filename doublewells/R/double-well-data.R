@@ -43,6 +43,8 @@ tothemiddle <- matrix(
 )
 
 ### A vector of names of empirical data sets stored in this package
-empiricals <- c("mine", "jpr", "sn_auth", "pira", "karate", "jazz",
-                "weaverbirds", "linux", "taro", "wiring",
-                "dolphins", "netsci")
+empiricals <- c(
+    "karate", "pira", "netsci", "jazz","drugusers", "hall", "highschool_boys", "surfersb",
+    "weaverbirds", "dolphins", "nestbox", "lizards", "bats", "elephantseals", "tortoises",
+    "housefinches", "voles"
+)

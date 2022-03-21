@@ -256,6 +256,27 @@ checks <- function(g) {
 
 checkplot <- function(g) plot(g, vertex.label = "", vertex.size = 3)
 
+Kendall_correlations <- function(df, constrain = TRUE, cutoff = 15) {
+    "This function relies on the exact output data frame of the simulation() function: it takes that data frame as input and returns a list with (1) a matrix of mean Kendall correlations, and (2) the standard deviation of those correlations. By default (`constrain = TRUE`) this function will only return computed mean/sd of correlations based on a 'sufficient' amount of data---that is, when the correlation was computed from at least `cutoff` pairs of values for D and the early warning indicator."
+    columns <- colnames(df)[3:length(colnames(df))]
+    dfsplit <- split(df, factor(df$n_lowerstate))
+
+    kendalls <- lapply(dfsplit, function(x) {
+        cor(x[, c("Ds", columns)], method = "kendall", use = "pairwise.complete.obs")[1, -1]
+    })
+    kendalls <- as.data.frame(do.call(rbind, kendalls))
+    kendalls$n_lowerstate <- as.integer(rownames(kendalls))
+    kendalls$n_steps <- sapply(dfsplit, nrow)
+
+    if(constrain) kendalls <- kendalls[kendalls$n_steps >= cutoff, ]
+
+    results <- list(
+        means = as.matrix(round(colMeans(kendalls[, columns], na.rm = TRUE), 3)),
+        sds = as.matrix(round(apply(kendalls[, columns], 2, sd, na.rm = TRUE), 3))
+    )
+    return(results)
+}
+
 ## Random Networks
 generate_network <-
     function(choice = c("random_regular", "max_entropy", "sphere_surface",
@@ -266,8 +287,7 @@ generate_network <-
              nislands = 5, nbridges = 1,
              pa.power = 1.5,
              pa.outdist = c(0, 10, (8+1/3), (6+2/3), 5, (3+1/3), (1+2/3), (5/6))*cprob,
-             sw.dim = 1, sw.nei = 3, sw.p = .1)
-{
+             sw.dim = 1, sw.nei = 3, sw.p = .1) {
     require(igraph)
     
     choice <- match.arg(choice)
@@ -295,10 +315,10 @@ choose_sentinels <- function(g, n, v = V(g)) {
     V(g)[nodes]
 }
 
-sentinel_ranking <- function(g, x, n = 5) {
+sentinel_ranking <- function(g, x, n = 5, cutoff = 2.5) {
     "Based on the graph, g, and the states of nodes, x, rank the nodes and return a set of n sentinel nodes."
     ## determine which nodes are in the lower state
-    avail <- V(g)[which(lowerstate(x) == 1)]
+    avail <- V(g)[which(lowerstate(x, cutoff = cutoff) == 1)]
     ## for each node i in the lower state, calculate a ranking that is the sum of the states of all adjacent nodes. <-- This isn't what I was talking about in the meeting, but I believe it is closer to Naoki's original idea.
     ## ↓ ranks nodes only on their present state, i.e. at t = T
     ranks <- sapply(avail, function(v) sum(x[neighbors(g, v)]))
@@ -309,40 +329,51 @@ sentinel_ranking <- function(g, x, n = 5) {
     V(g)[df$avail[1:n]]
 }
 
-sentinel_ranking_ts <- function(g, X, samples, n = 5) {
+sentinel_ranking_ts <- function(g, X, samples, n = 5, cutoff = 2.5, use.neighbors = TRUE) {
     "Choose `n` sentinel nodes in a graph `g` based on the AVERAGE state of the x_i in `X` over the time step window, length `wl`, ending at `t`."
     x <- X[nrow(X), ]
-    avail <- V(g)[which(lowerstate(x) == 1)]
+    avail <- V(g)[which(lowerstate(x, cutoff = cutoff) == 1)]
     ## ↓ ranks nodes on their average state over the window
-    ranks <- colMeans(X[samples, avail])
+    if(use.neighbors) {
+        ranks <- sapply(avail, function(v) sum(colMeans(as.matrix(X[samples, neighbors(g, v)]))))
+    } else ranks <- colMeans(X[samples, avail])
     df <- data.frame(avail = as.numeric(avail), ranks)
     df <- df[order(df$ranks, decreasing = TRUE), ]
     V(g)[df$avail[1:n]]
 }
 
 ## Counting Functions
-upperstate <- function(x, cutoff = 7) {
-    "A counting function: return 1 if the node is in the upper state (currently x_i = 7), and zero otherwise."
+upperstate <- function(x, cutoff = 5.7) {
+    "A counting function: return 1 if the node is in the upper state and zero otherwise. The default value of `cutoff` is based on r = [1, 4, 7]."
     ifelse(x >= cutoff, 1, 0)
 }
-lowerstate <- function(x, cutoff = 2.5) {
-    "A counting function: return 1 if the node is in the lower state and zero otherwise. The current default cutoff is set to 2.5, which is /approximately/ the value of x_i at which the node state will be 'pulled' towards the separatrix when r = (1, 4, 7), the current default. A better value can be found analytically if it becomes important to do so."
+lowerstate <- function(x, cutoff = 2.3) {
+    "A counting function: return 1 if the node is in the lower state and zero otherwise. The current default cutoff is set to 2.3, which is /approximately/ the value of x_i at which the node state will be 'pulled' towards the separatrix when r = (1, 4, 7), the current default."
     ifelse(x <= cutoff, 1, 0)
 }
 
 ## Analysis
+dw <- function(x, r) {
+    "This is the basic double well differential equation. For finding minima/maxima."
+    -(x - r[1])*(x - r[2])*(x - r[3])
+}
+
 simulation <- function(g # the network
                      , r = c(1, 4, 7)
-                     , D.init = 0.2
-                     , s = 0.005 # noise intensity
+                     , D.init = 0.01
+                     , s = 0.05 # noise intensity
                      , nsamples = 250 # number of early warning indicator samples
-                     , stepsize = 1e-3
+                     , lag = 0.1
+                     , stepsize = 5e-3
                      , n_sentinels = 5
-                     , cutoff = .1*vcount(g)
+                     , node_cutoff = .1*vcount(g)
+                     , state_cutoff = NULL
                      , TU = 75
                      , dt = 0.01
                        ) {
     "This function simulates a multi-node double well system over increasing values of the connection strength, D, between nodes. It returns a data frame with the state of the system after each round of integration and the value of each early warning indicator in that iteration."
+    if(is.null(state_cutoff)) state_cutoff <- optimize(dw, c(r[1], r[2]), r = r)$minimum
+    
     nnodes <- vcount(g)
     A <- as_adj(g, type = "both", sparse = FALSE)
 
@@ -352,13 +383,14 @@ simulation <- function(g # the network
     u <- rep(0, nnodes) # stress vector, not used in this analysis so set to zero
 
     ## Sim Params
-    τ <- TU#75 # time units
+    ##τ <- TU#75 # time units
     ##dt <- 0.01 # for integration
-    T <- τ/dt
-    ##s <- 0.005
+    T <- TU/dt
+
+    s <- s*sqrt(dt)
 
     ## Early Warnings Params
-    lag <- 0.1 # for autocorrelation
+    ##lag <- 0.1 # for autocorrelation
     lag <- lag/dt
 
     ##n_sentinels <- 5
@@ -366,14 +398,13 @@ simulation <- function(g # the network
     ##nsamples <- 250
     sample_spacing <- 0.1
     sample_spacing <- sample_spacing/dt
-    samples <- seq(T, T - (nsamples*sample_spacing), by = -sample_spacing) # for all EWs
+    samples <- seq(from = T, by = -sample_spacing, length.out = nsamples) # for all EWs , T - (nsamples*sample_spacing)
 
-    initialx <- rep(1, nnodes) + noise(nnodes, s)
-    x <- initialx
+    initialx <- rep(1, nnodes)# + noise(nnodes, s)
 
     in_lowerstate <- V(g)
     ##stepsize <- 1e-3 # for incrementing D --> set to 1e-3 for production
-    ##cutoff <- .1*nnodes # to stop simulation
+    ##node.cutoff <- .1*nnodes # to stop simulation
 
     ## Storage Vectors
     n_lowerstate <- numeric()
@@ -387,7 +418,8 @@ simulation <- function(g # the network
 
     ## Main Simulation Loop
     i <- 1
-    while(length(in_lowerstate) > cutoff) {
+    while(length(in_lowerstate) > node_cutoff) {
+        x <- initialx
         X <- matrix(0, nrow = T, ncol = nnodes)
 
         for(t in 1:T) {
@@ -396,12 +428,12 @@ simulation <- function(g # the network
         }
 
         ## Exit condition
-        in_lowerstate <- V(g)[which(lowerstate(x) == 1)]
-        if(length(in_lowerstate) <= cutoff) break
+        in_lowerstate <- V(g)[which(lowerstate(x, cutoff = state_cutoff) == 1)]
+        if(length(in_lowerstate) <= node_cutoff) break
         if(length(in_lowerstate) < n_sentinels) break
 
         ## Determine sentinels
-        sentinels <- sentinel_ranking_ts(g, X, samples, n = n_sentinels)
+        sentinels <- sentinel_ranking_ts(g, X, samples, n = n_sentinels, cutoff = state_cutoff)
 
         ## Calculate and Store
         maxeig$all[i] <- sampled_eigenmethod(X, samples = samples, nodes = V(g))

@@ -1,11 +1,12 @@
 ## Code by Neil MacLaren, 2/24/2022
+## Parameters and bifurcation parameter for Prosenjit Kundu, 3/4/2022
 
 library(igraph)
 library(doublewells)
 
-save_plots <- FALSE # TRUE
+save_plots <- TRUE # FALSE
 use_noise <- FALSE # TRUE
-run_simulation <- TRUE # FALSE
+run_simulation <- FALSE # TRUE
 
 choices <- empiricals # list of empirical networks from doublewells package
 data(list = choices)
@@ -26,9 +27,10 @@ if(run_simulation) {
         ## Node Systems
         r <- c(1, 2, 5) # double well parameters
         if(use_noise) s <- 0.005 else s <- 0 # sd of noise process
-        D <- 0.01 # this is the initial value of D
+        D <- 0.001 # this is the initial value of D
         p <- if(s > 0) 3*s else 0.015 # perturbation strength
-        u <- rep(0, nnodes) # stress vector
+        u <- .3 # this is the initial value
+        U <- rep(u, nnodes) # stress vector
 
         τ <- 75 # duration in time units
         dt <- 0.01 # step size for integration
@@ -39,13 +41,13 @@ if(run_simulation) {
         ## Simulation Parameters
         x <- initialx # an updating vector of x_i
 
-        stepsize <- 1e-2 # for incrementing D
+        stepsize <- 1e-2 # for incrementing u
         cutoff <- .1*nnodes # to stop simulation; production value is .1
         in_lowerstate <- V(g) # initial vector of nodes in the lower state (all of them)
 
         ## Storage Vectors
         n_lowerstate <- numeric() # storage vector for the number of nodes in the lower state
-        Ds <- numeric() # storage vector for the state of the bifurcation parameter
+        us <- numeric() # storage vector for the state of the bifurcation parameter
 
         ## Integrate and Store
         j <- 1
@@ -55,7 +57,7 @@ if(run_simulation) {
             ## Integration
             for(t in 1:T) {
                 X[t, ] <- x
-                x <- double_well_coupled(x, r[1], r[2], r[3], D, A, dt, noise(nnodes, s), u)
+                x <- double_well_coupled(x, r[1], r[2], r[3], D, A, dt, noise(nnodes, s), U)
             }
             
             ## Exit condition
@@ -64,41 +66,43 @@ if(run_simulation) {
 
             ## Store
             n_lowerstate[j] <- length(in_lowerstate)
-            Ds[j] <- D
+            us[j] <- u
 
             ## Iterate
-            D <- D + stepsize
+            u <- u + stepsize
+            U <- rep(u, nnodes) # stress vector
             j <- j + 1
         }
 
         ## Make Results Data Frame
-        df <- data.frame(graph = choice, CV = CV, D = Ds, n_lowerstate = n_lowerstate)
+        df <- data.frame(graph = choice, vcount = vcount(g),
+                         CV = CV, u = us, n_lowerstate = n_lowerstate)
         results[[i]] <- df
     }
     results <- do.call(rbind, results)
-    save(results, file = "./data/cv-D-results.rda")
+    save(results, file = "./data/cv-results.rda")
 } else {
-    load("./data/cv-D-results.rda")
-    stepsize <- results$D[2] - results$D[1]
+    load("./data/cv-results.rda")
+    stepsize <- results$u[2] - results$u[1]
 }
     
 
 parts <- split(results, factor(results$graph))
 
 find_range <- function(df, stepsize = 1e-3) {
-    nnodes <- df$n_lowerstate[1] # the initial D is below that at which any of these networks starts to show transitions
+    nnodes <- unique(df$vcount)
     firststate <- floor(nnodes - (nnodes*.1))
     first <- which(df$n_lowerstate < firststate)[1]
     if(is.na(first)) return(0)
     ## otherwise...
     last <- nrow(df)
-    firstD <- df$D[first]
-    lastD <- df$D[last] + stepsize
-    lastD - firstD
+    first_u <- df$u[first]
+    last_u <- df$u[last] + stepsize
+    last_u - first_u
 }
 
 dat <- lapply(parts, function(x) {
-    c(rangeD = find_range(x), CV = unique(x$CV), nstages = length(unique(x$n_lowerstate)))
+    c(range_u = find_range(x), CV = unique(x$CV), nstages = length(unique(x$n_lowerstate)))
 })
 
 df <- do.call(rbind, dat)
@@ -107,11 +111,11 @@ df <- do.call(rbind, dat)
 ht <- 7
 wd <- 14
 if(save_plots) {
-    pdf("./img/compare-CV-with-D.pdf", height = ht, width = wd)
+    pdf("./img/compare-CV-with-u.pdf", height = ht, width = wd)
 } else dev.new(height = ht, width = wd)
 par(mfrow = c(1, 2))
 plot(nstages ~ CV, data = df, pch = 19, col = "firebrick",
      xlab = "CV of Degree Distribution", ylab = "Number of Stages in Double-Wells Transition")
-plot(rangeD ~ CV, data = df, pch = 19, col = "steelblue",
-     xlab = "CV of Degree Distribution", ylab = "Magnitude of Range of D Over Which Transitions Occur")
+plot(range_u ~ CV, data = df, pch = 19, col = "steelblue",
+     xlab = "CV of Degree Distribution", ylab = "Magnitude of Range of u Over Which Transitions Occur")
 if(save_plots) dev.off()

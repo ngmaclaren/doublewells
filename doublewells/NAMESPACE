@@ -8,7 +8,7 @@ export(
     "sampled_eigenmethod", "sampled_MoranI", "sampled_sdmethod", "sampled_acmethod",
 
     ## Helper Functions
-    "select_stressnode", "get_gcc", "CVk", "checks", "checkplot",
+    "select_stressnode", "get_gcc", "CVk", "checks", "checkplot", "Kendall_correlations",
 
     ## Algorithm Support Functions
     "choose_sentinels", "sentinel_ranking", "sentinel_ranking_ts",

@@ -5,63 +5,58 @@ library(doublewells)
 
 set.seed(123)
 
-save_plots <- FALSE
+save_plots <- FALSE # TRUE
+run_sims <- FALSE # TRUE
 
-data(pref_attach)
-g <- pref_attach
+intensities <- c(.01, .05, .1, .5)
+sample_sizes <- c(250, 150, 50, 25)
+rs <- list(c(1, 3, 5), c(1, 2.5, 7), c(1, 4, 7), c(1, 5.5, 7))
+stopifnot(length(intensities) == length(sample_sizes) & length(sample_sizes) == length(rs))
+length.each <- length(intensities)
 
-results <- list()
-intensities <- c(.001, .005, .01)
-sample_sizes <- c(250, 150, 50)
+if(run_sims) {
+    data(pref_attach)
+    g <- pref_attach
 
-for(i in 1:length(intensities)) {
-    print(intensities[i])
-    results[[i]] <- simulation(g, s = intensities[i])
-}
+    results <- list()
 
-for(i in (1:length(sample_sizes) + length(intensities))) {
-    print(sample_sizes[i - length(intensities)])
-    results[[i]] <- simulation(g, nsamples = sample_sizes[i - length(intensities)])
-}
+    for(i in 1:length.each) {
+        print(intensities[i])
+        results[[i]] <- simulation(g, s = intensities[i])
+    }
 
-Kendall_correlations <- function(df) {
-    columns <- colnames(df)[3:length(colnames(df))]
-    dfsplit <- split(df, factor(df$n_lowerstate))
+    for(i in 1:length.each) {
+        print(sample_sizes[i])
+        results[[i + length.each]] <- simulation(g, nsamples = sample_sizes[i])
+    }
 
-    kendalls <- lapply(dfsplit, function(x) {
-        cor(x[, c("Ds", columns)], method = "kendall", use = "pairwise.complete.obs")[1, -1]
-    })
-    kendalls <- as.data.frame(do.call(rbind, kendalls))
-    kendalls$n_lowerstate <- as.integer(rownames(kendalls))
-    kendalls$n_steps <- sapply(dfsplit, nrow)
+    for(i in 1:length.each) {
+        print(rs[[i]])
+        results[[i + 2*length.each]] <- simulation(g, r = rs[[i]])
+    }
 
-    kendalls <- kendalls[kendalls$n_steps > 15, ]
-
-    ##kendalls <- kendalls[order(kendalls$n_steps), ]
-    results <- list(
-        means = as.matrix(round(colMeans(kendalls[, columns], na.rm = TRUE), 3)),
-        sds = as.matrix(round(apply(kendalls[, columns], 2, sd, na.rm = TRUE), 3))
-    )
-    return(results)
+    parameter_variation_results <- results
+    save(parameter_variation_results, file = "./data/parameter-variation-results.rda")
+} else {
+    load("./data/parameter-variation-results.rda")
+    results <- parameter_variation_results
 }
 
 if(!dir.exists("./r-out")) dir.create("./r-out")
 sink("./r-out/parameter-variation.txt", append = FALSE, type = "output", split = TRUE)
 
+## modify this to give a data frame with mean, sd, ll, and ul ?
 for(i in 1:length(results)) {## this prints the MEAN Kendall correlation. I will need sd as well.
-    if(i <= 3) {
+    if(i <= length.each) {
         print(paste0("Intensity: ", intensities[i]))
-        print(paste0("N Samples: ", 250))
-    } else if(i > 3) {
-        j <- i - 3
-        print(paste0("Intensity: ", 0.005))
-        print(paste0("N Samples: ", sample_sizes[j]))
-    }
+    } else if(i > length.each & i <= 2*length.each) {
+        print(paste0("N Samples: ", sample_sizes[i - length.each]))
+    } else print(paste0("r = ", rs[[i - 2*length.each]]))
     corr_results <- Kendall_correlations(results[[i]]$results)
     print("Means")
     print(corr_results$means)
-    print("SDs")
-    print(corr_results$sds)
+    ##print("SDs")
+    ##print(corr_results$sds)
 }
 
 sink()
