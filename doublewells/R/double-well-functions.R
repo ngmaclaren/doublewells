@@ -361,15 +361,16 @@ dw <- function(x, r) {
 simulation <- function(g # the network
                      , r = c(1, 4, 7)
                      , D.init = 0.01
-                     , s = 0.05 # noise intensity
-                     , nsamples = 250 # number of early warning indicator samples
+                     , s = 0.05
+                     , nsamples = 250
                      , lag = 0.1
                      , stepsize = 5e-3
                      , n_sentinels = 5
                      , node_cutoff = .1*vcount(g)
                      , state_cutoff = NULL
-                     , TU = 75
+                     , TU = 100
                      , dt = 0.01
+                     , check_equil = FALSE
                        ) {
     "This function simulates a multi-node double well system over increasing values of the connection strength, D, between nodes. It returns a data frame with the state of the system after each round of integration and the value of each early warning indicator in that iteration."
     if(is.null(state_cutoff)) state_cutoff <- optimize(dw, c(r[1], r[2]), r = r)$minimum
@@ -383,19 +384,13 @@ simulation <- function(g # the network
     u <- rep(0, nnodes) # stress vector, not used in this analysis so set to zero
 
     ## Sim Params
-    ##τ <- TU#75 # time units
-    ##dt <- 0.01 # for integration
     T <- TU/dt
 
     s <- s*sqrt(dt)
 
     ## Early Warnings Params
-    ##lag <- 0.1 # for autocorrelation
     lag <- lag/dt
 
-    ##n_sentinels <- 5
-
-    ##nsamples <- 250
     sample_spacing <- 0.1
     sample_spacing <- sample_spacing/dt
     samples <- seq(from = T, by = -sample_spacing, length.out = nsamples) # for all EWs , T - (nsamples*sample_spacing)
@@ -403,8 +398,6 @@ simulation <- function(g # the network
     initialx <- rep(1, nnodes)# + noise(nnodes, s)
 
     in_lowerstate <- V(g)
-    ##stepsize <- 1e-3 # for incrementing D --> set to 1e-3 for production
-    ##node.cutoff <- .1*nnodes # to stop simulation
 
     ## Storage Vectors
     n_lowerstate <- numeric()
@@ -416,6 +409,8 @@ simulation <- function(g # the network
     avgac <- list(all = numeric(), lower = numeric(), sentinel = numeric())
     sentinel_history <- list()
 
+    if(check_equil) equils <- list()
+
     ## Main Simulation Loop
     i <- 1
     while(length(in_lowerstate) > node_cutoff) {
@@ -425,6 +420,12 @@ simulation <- function(g # the network
         for(t in 1:T) {
             X[t, ] <- x
             x <- double_well_coupled(x, r[1], r[2], r[3], D, A, dt, noise(nnodes, s), u)
+        }
+
+        if(check_equil) {
+            at_equil <- X[(TU-25)/dt, ]
+            at_end <- X[TU/dt, ]
+            equils[[i]] <- data.frame(at_equil, at_end)
         }
 
         ## Exit condition
@@ -486,8 +487,13 @@ simulation <- function(g # the network
         Ds = Ds
     )
     df <- cbind(df, maxeig, maxsd, avgsd, maxac, avgac)
-    
-    return(list(results = df, sentinels = sentinel_history))
+
+    if(check_equil) {
+        return(list(
+            results = df, sentinels = sentinel_history, equil = equils))
+    } else {
+        return(list(results = df, sentinels = sentinel_history))
+    }
 }
 
 ## Old functions

@@ -1,11 +1,16 @@
-## Something is wrong with the plotting.
+## Need to add another layer to the multilevel model: `run`
+## There should be 30--50 runs, the results of which should each be saved to a separate .rda
+## There should be a subdirectory under data for all those .rda files
+## I also want to split this file into two:
+### network-variation-sims.R that conducts the sims and saves the results
+### network-variation-analysis.R that loads the results, runs the models, and makes the figure
 
 ## Code by Neil MacLaren 3/1/2022
 library(nlme)
 library(igraph)
 library(doublewells)
 
-set.seed(12345) # v1: 123, v2: 1234, v3: 12345
+set.seed(123) # v1: 123, v2: 1234, v3: 12345
 
 run_sims <- TRUE # FALSE
 save_plots <- TRUE # FALSE
@@ -31,6 +36,9 @@ if(run_sims) {
     save(network_variation_results, file = "./data/network-variation-results.rda")
 } else {
     load("./data/network-variation-results.rda")
+    ##load("./data/network-variation-results-v1.rda")
+    ##load("./data/network-variation-results-v2.rda")
+    ##load("./data/network-variation-results-v3.rda")
     results <- network_variation_results
     names(results) <- networks
 }

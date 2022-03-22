@@ -21,14 +21,14 @@ if(run_sims) {
         g <- get(choices[k])
         graphlist[[k]] <- g
 
-        df_list[[k]] <- simulation(g)
+        df_list[[k]] <- simulation(g)#, TU = 75, check_equil = TRUE)
         ## kendalls_list[[k]] <- Kendall_correlations()
     }
 
     examples_results <- df_list
-    save(examples_results, file = "./examples-results.rda")
+    save(examples_results, file = "./data/examples-results.rda")
 } else {
-    load("./examples-results.rda")
+    load("./data/examples-results.rda")
     df_list <- examples_results
 }
 
