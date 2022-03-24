@@ -12,7 +12,7 @@ filename <- paste0("./data/parameter-variation-results-", which_network, ".rda")
 outfile <- paste0("./r-out/parameter-variation-", which_network, ".txt")
 
 intensities <- c(.01, .05, .1, .5)
-sample_sizes <- c(250, 150, 50, 25)
+sample_sizes <- rev(c(250, 150, 50, 25))
 rs <- list(c(1, 3, 5), c(1, 2.5, 7), c(1, 4, 7), c(1, 5.5, 7))
 TUs <- c(50, 75, 90, 100)
 stopifnot(length(intensities) == length(sample_sizes) & length(sample_sizes) == length(rs))

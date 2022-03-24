@@ -1,0 +1,144 @@
+\begin{thebibliography}{10}
+
+\bibitem{adelman2015}
+James~S Adelman, Sahnzi~C Moyers, Damien~R Farine, and Dana~M Hawley.
+\newblock Feeder use predicts both acquisition and transmission of a contagious
+  pathogen in a north american songbird.
+\newblock {\em Proceedings of the Royal Society B: Biological Sciences},
+  282(1815):20151429, 2015.
+
+\bibitem{barabasi1999}
+Albert-L{\'a}szl{\'o} Barab{\'a}si and R{\'e}ka Albert.
+\newblock Emergence of scaling in random networks.
+\newblock {\em science}, 286(5439):509--512, 1999.
+
+\bibitem{bull2012}
+C~Michael Bull, SS~Godfrey, and DM~Gordon.
+\newblock Social networks and the spread of salmonella in a sleepy lizard
+  population.
+\newblock {\em Molecular Ecology}, 21(17):4386--4392, 2012.
+
+\bibitem{casey2015}
+Caroline Casey, Isabelle Charrier, Nicolas Mathevon, and Colleen Reichmuth.
+\newblock Rival assessment among northern elephant seals: evidence of
+  associative learning during male--male contests.
+\newblock {\em Royal Society Open Science}, 2(8):150228, 2015.
+
+\bibitem{cho2009}
+Young~Sul Cho, Jin~Seop Kim, Juyong Park, Byungnam Kahng, and Doochul Kim.
+\newblock Percolation transitions in scale-free networks under the achlioptas
+  process.
+\newblock {\em Physical review letters}, 103(13):135702, 2009.
+
+\bibitem{coleman1964}
+James~Samuel Coleman.
+\newblock {\em Introduction to mathematical sociology.}
+\newblock Free Press, New York, 1964.
+
+\bibitem{csardi2006}
+Gabor Csardi and Tamas Nepusz.
+\newblock The igraph software package for complex network research.
+\newblock {\em InterJournal}, Complex Systems:1695, 2006.
+
+\bibitem{davis2015}
+Stephen Davis, Babak Abbasi, Shrupa Shah, Sandra Telfer, and Mike Begon.
+\newblock Spatial analyses of wildlife contact networks.
+\newblock {\em Journal of the Royal Society Interface}, 12(102):20141004, 2015.
+
+\bibitem{erdos1959}
+P~Erd\H{o}s and A~R\'enyi.
+\newblock On random graphs.
+\newblock {\em Publicationes Mathematicae}, 6:290--297, 1959.
+
+\bibitem{firth2015}
+Josh~A Firth and Ben~C Sheldon.
+\newblock Experimental manipulation of avian social structure reveals
+  segregation is carried over across contexts.
+\newblock {\em Proceedings of the Royal Society B: Biological Sciences},
+  282(1802):20142350, 2015.
+
+\bibitem{freeman1988}
+Linton~C Freeman, Sue~C Freeman, and Alaina~G Michaelson.
+\newblock On human social intelligence.
+\newblock {\em Journal of Social and Biological Structures}, 11(4):415--425,
+  1988.
+
+\bibitem{freeman1998}
+Linton~C Freeman, Cynthia~M Webster, and Deirdre~M Kirke.
+\newblock Exploring social structure using dynamic three-dimensional color
+  images.
+\newblock {\em Social networks}, 20(2):109--118, 1998.
+
+\bibitem{gill2014}
+Paul Gill, Jeongyoon Lee, Karl~R Rethemeyer, John Horgan, and Victor Asal.
+\newblock Lethal connections: The determinants of network connections in the
+  provisional irish republican army, 1970--1998.
+\newblock {\em International Interactions}, 40(1):52--78, 2014.
+
+\bibitem{gleiser2003}
+Pablo~M Gleiser and Leon Danon.
+\newblock Community structure in jazz.
+\newblock {\em Advances in complex systems}, 6(04):565--573, 2003.
+
+\bibitem{lancichinetti2008}
+Andrea Lancichinetti, Santo Fortunato, and Filippo Radicchi.
+\newblock Benchmark graphs for testing community detection algorithms.
+\newblock {\em Physical review E}, 78(4):046110, 2008.
+
+\bibitem{lusseau2003}
+David Lusseau, Karsten Schneider, Oliver~J Boisseau, Patti Haase, Elisabeth
+  Slooten, and Steve~M Dawson.
+\newblock The bottlenose dolphin community of doubtful sound features a large
+  proportion of long-lasting associations.
+\newblock {\em Behavioral Ecology and Sociobiology}, 54(4):396--405, 2003.
+
+\bibitem{newman2006}
+Mark~EJ Newman.
+\newblock Finding community structure in networks using the eigenvectors of
+  matrices.
+\newblock {\em Physical review E}, 74(3):036104, 2006.
+
+\bibitem{pinheiro2021}
+Jose Pinheiro, Douglas Bates, Saikat DebRoy, Deepayan Sarkar, and {R Core
+  Team}.
+\newblock {\em {nlme}: Linear and Nonlinear Mixed Effects Models}, 2021.
+\newblock R package version 3.1-153.
+
+\bibitem{sah2016}
+Pratha Sah, Kenneth~E Nussear, Todd~C Esque, Christina~M Aiello, Peter~J
+  Hudson, and Shweta Bansal.
+\newblock Inferring social structure and its drivers from refuge use in the
+  desert tortoise, a relatively solitary species.
+\newblock {\em Behavioral Ecology and Sociobiology}, 70(8):1277--1289, 2016.
+
+\bibitem{schoch2022}
+David Schoch.
+\newblock {\em networkdata: Repository of Network Datasets}, 2022.
+\newblock R package version 0.1.10.
+
+\bibitem{silvis2014}
+Alexander Silvis, Andrew~B Kniowski, Stanley~D Gehrt, and W~Mark Ford.
+\newblock Roosting and foraging social structure of the endangered indiana bat
+  (myotis sodalis).
+\newblock {\em PLoS One}, 9(5):e96937, 2014.
+
+\bibitem{vandijk2014}
+Rene~E van Dijk, Jennifer~C Kaden, Araceli Arg{\"u}elles-Tic{\'o}, Deborah~A
+  Dawson, Terry Burke, and Ben~J Hatchwell.
+\newblock Cooperative investment in public goods is kin directed in communal
+  nests of social birds.
+\newblock {\em Ecology letters}, 17(9):1141--1148, 2014.
+
+\bibitem{weeks2002}
+Margaret~R Weeks, Scott Clair, Stephen~P Borgatti, Kim Radda, and Jean~J
+  Schensul.
+\newblock Social networks of drug users in high-risk sites: Finding the
+  connections.
+\newblock {\em AIDS and Behavior}, 6(2):193--206, 2002.
+
+\bibitem{zachary1977}
+Wayne~W Zachary.
+\newblock An information flow model for conflict and fission in small groups.
+\newblock {\em Journal of anthropological research}, 33(4):452--473, 1977.
+
+\end{thebibliography}

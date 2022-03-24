@@ -1,0 +1,64 @@
+Linear mixed-effects model fit by REML
+  Data: rdf[rdf$ewi == "avgsd", ] 
+        AIC       BIC   logLik
+  -160.9535 -148.0947 86.47676
+
+Random effects:
+ Formula: ~1 | network
+        (Intercept)
+StdDev:  0.01700138
+
+ Formula: ~1 | nodeset %in% network
+        (Intercept)   Residual
+StdDev:  0.05196029 0.01676906
+
+Fixed effects:  tau ~ nodeset 
+                    Value  Std.Error DF  t-value p-value
+(Intercept)     0.8605909 0.01219187 42 70.58725  0.0000
+nodesetlower    0.0482273 0.01646228 42  2.92956  0.0055
+nodesetsentinel 0.0194545 0.01646228 42  1.18177  0.2439
+ Correlation: 
+                (Intr) ndstlw
+nodesetlower    -0.675       
+nodesetsentinel -0.675  0.500
+
+Standardized Within-Group Residuals:
+        Min          Q1         Med          Q3         Max 
+-1.11515145 -0.08921548  0.03224794  0.14951385  0.49809553 
+
+Number of Observations: 66
+Number of Groups: 
+             network nodeset %in% network 
+                  22                   66 
+Linear mixed-effects model fit by REML
+  Data: rdf[rdf$ewi == "avgac", ] 
+        AIC       BIC   logLik
+  -131.7362 -118.8774 71.86812
+
+Random effects:
+ Formula: ~1 | network
+        (Intercept)
+StdDev:  0.03416634
+
+ Formula: ~1 | nodeset %in% network
+        (Intercept)   Residual
+StdDev:  0.06087018 0.02267976
+
+Fixed effects:  tau ~ nodeset 
+                    Value  Std.Error DF  t-value p-value
+(Intercept)     0.7730909 0.01564796 42 49.40522  0.0000
+nodesetlower    0.0590909 0.01958559 42  3.01706  0.0043
+nodesetsentinel 0.0429545 0.01958559 42  2.19317  0.0339
+ Correlation: 
+                (Intr) ndstlw
+nodesetlower    -0.626       
+nodesetsentinel -0.626  0.500
+
+Standardized Within-Group Residuals:
+        Min          Q1         Med          Q3         Max 
+-0.71307438 -0.18301518  0.03681006  0.22223738  0.57205365 
+
+Number of Observations: 66
+Number of Groups: 
+             network nodeset %in% network 
+                  22                   66 

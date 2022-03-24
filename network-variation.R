@@ -13,7 +13,7 @@ library(doublewells)
 set.seed(123) # v1: 123, v2: 1234, v3: 12345
 
 run_sims <- TRUE # FALSE
-save_plots <- TRUE # FALSE
+save_plots <- FALSE # TRUE
 save_results <- TRUE # FALSE
 
 networks <- c(
@@ -29,11 +29,11 @@ if(run_sims) {
         net <- networks[i]
         print(net)
         g <- get(net)
-        results[[i]] <- simulation(g)
+        results[[i]] <- simulation(g, TU = 125, check_equil = TRUE)
     }
 
     network_variation_results <- results
-    save(network_variation_results, file = "./data/network-variation-results.rda")
+    save(network_variation_results, file = "./data/network-variation-results-test.rda")
 } else {
     load("./data/network-variation-results.rda")
     ##load("./data/network-variation-results-v1.rda")
@@ -74,7 +74,7 @@ avgac <- lme(tau ~ nodeset, random = ~ 1 | network/nodeset, data = rdf[rdf$ewi =
 
 if(save_results) {
     if(!dir.exists("./r-out")) dir.create("./r-out")
-    sink("./r-out/network-variation.txt", append = FALSE, type = "output", split = TRUE)
+    sink("./r-out/network-variation-test.txt", append = FALSE, type = "output", split = TRUE)
 
     print(summary(avgsd))
     print(summary(avgac))
@@ -133,3 +133,15 @@ segments(x0 = plotvals[[2]]$lowers, x1 = plotvals[[2]]$uppers, y0 = ypos,
 legend("bottomleft", legend = legendlabels,
        col = colors, bty = "n", pch = 16:18, lty = 1, lwd = 1)#, pt.cex = 2)
 if(save_plots) dev.off()
+
+
+
+
+names(results) <- networks
+for(i in 1:length(results)) {
+    dl <- results[[i]]
+    dev.new()
+    plot(NULL, xlim = c(0, 11), ylim = c(0, 11), xlab = "At Equil", ylab = "At End",
+         main = networks[i])
+    for(df in dl$equil) points(df)
+}

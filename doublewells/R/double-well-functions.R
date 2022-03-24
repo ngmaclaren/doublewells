@@ -358,7 +358,7 @@ dw <- function(x, r) {
     -(x - r[1])*(x - r[2])*(x - r[3])
 }
 
-simulation <- function(g # the network
+simulation <- function(g
                      , r = c(1, 4, 7)
                      , D.init = 0.01
                      , s = 0.05
@@ -368,9 +368,10 @@ simulation <- function(g # the network
                      , n_sentinels = 5
                      , node_cutoff = .1*vcount(g)
                      , state_cutoff = NULL
-                     , TU = 100
+                     , TU = 75
                      , dt = 0.01
                      , check_equil = FALSE
+                     , state_check = TU - 25
                        ) {
     "This function simulates a multi-node double well system over increasing values of the connection strength, D, between nodes. It returns a data frame with the state of the system after each round of integration and the value of each early warning indicator in that iteration."
     if(is.null(state_cutoff)) state_cutoff <- optimize(dw, c(r[1], r[2]), r = r)$minimum
@@ -385,6 +386,7 @@ simulation <- function(g # the network
 
     ## Sim Params
     T <- TU/dt
+    state_check <- state_check/dt
 
     s <- s*sqrt(dt)
 
@@ -429,7 +431,7 @@ simulation <- function(g # the network
         }
 
         ## Exit condition
-        in_lowerstate <- V(g)[which(lowerstate(x, cutoff = state_cutoff) == 1)]
+        in_lowerstate <- V(g)[which(lowerstate(X[state_check, ], cutoff = state_cutoff) == 1)]
         if(length(in_lowerstate) <= node_cutoff) break
         if(length(in_lowerstate) < n_sentinels) break
 
