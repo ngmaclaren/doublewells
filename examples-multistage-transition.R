@@ -19,11 +19,13 @@ if(run_sims) {
     data(list = choices) ## load the appropriate networks
 
     df_list <- list() ## storage list
+    ##df_list_alt <- list()
 
     for(i in 1:length(choices)) {## do the same procedure with both networks
         g <- get(choices[i]) ## convenient renaming for the network object
 
         df_list[[i]] <- simulation(g) ## run the simulation and store the results
+       ## df_list_alt[[i]] <- simulation(g, state_check = 75)
     }
 
     examples_results <- df_list ## rename results for saving purposes (because objects that have been saved with save() open as the name they were saved under

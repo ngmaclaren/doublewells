@@ -258,11 +258,19 @@ checkplot <- function(g) plot(g, vertex.label = "", vertex.size = 3)
 
 Kendall_correlations <- function(df, constrain = TRUE, cutoff = 15) {
     "This function relies on the exact output data frame of the simulation() function: it takes that data frame as input and returns a list with (1) a matrix of mean Kendall correlations, and (2) the standard deviation of those correlations. By default (`constrain = TRUE`) this function will only return computed mean/sd of correlations based on a 'sufficient' amount of data---that is, when the correlation was computed from at least `cutoff` pairs of values for D and the early warning indicator."
-    columns <- colnames(df)[3:length(colnames(df))]
+    ##columns <- colnames(df)[3:length(colnames(df))]
+    columns <- colnames(df)[
+        c(grep("_all", colnames(df)),
+          grep("_lower", colnames(df)),
+          grep("_sentinel", colnames(df)))
+    ]
     dfsplit <- split(df, factor(df$n_lowerstate))
 
     kendalls <- lapply(dfsplit, function(x) {
-        cor(x[, c("Ds", columns)], method = "kendall", use = "pairwise.complete.obs")[1, -1]
+        suppressWarnings(# warns that sd == 0
+            cor(x[, c("Ds", columns)], method = "kendall",
+                use = "pairwise.complete.obs")[1, -1]
+        )
     })
     kendalls <- as.data.frame(do.call(rbind, kendalls))
     kendalls$n_lowerstate <- as.integer(rownames(kendalls))
@@ -272,7 +280,9 @@ Kendall_correlations <- function(df, constrain = TRUE, cutoff = 15) {
 
     results <- list(
         means = as.matrix(round(colMeans(kendalls[, columns], na.rm = TRUE), 3)),
-        sds = as.matrix(round(apply(kendalls[, columns], 2, sd, na.rm = TRUE), 3))
+        sds = suppressWarnings(# warns when sd == 0
+            as.matrix(round(apply(kendalls[, columns], 2, sd, na.rm = TRUE), 3))
+        )
     )
     return(results)
 }
@@ -329,9 +339,10 @@ sentinel_ranking <- function(g, x, n = 5, cutoff = 2.5) {
     V(g)[df$avail[1:n]]
 }
 
-sentinel_ranking_ts <- function(g, X, samples, n = 5, cutoff = 2.5, use.neighbors = TRUE) {
+sentinel_ranking_ts <- function(g, X, samples, n = 5, cutoff = 2.5, state_check = samples[length(samples)],
+                                use.neighbors = TRUE) {
     "Choose `n` sentinel nodes in a graph `g` based on the AVERAGE state of the x_i in `X` over the time step window, length `wl`, ending at `t`."
-    x <- X[nrow(X), ]
+    x <- X[state_check, ]#X[nrow(X), ]
     avail <- V(g)[which(lowerstate(x, cutoff = cutoff) == 1)]
     ## ↓ ranks nodes on their average state over the window
     if(use.neighbors) {
@@ -436,7 +447,8 @@ simulation <- function(g
         if(length(in_lowerstate) < n_sentinels) break
 
         ## Determine sentinels
-        sentinels <- sentinel_ranking_ts(g, X, samples, n = n_sentinels, cutoff = state_cutoff)
+        sentinels <- sentinel_ranking_ts(g, X, samples, n = n_sentinels,
+                                         cutoff = state_cutoff, state_check = state_check)
 
         ## Calculate and Store
         maxeig$all[i] <- sampled_eigenmethod(X, samples = samples, nodes = V(g))
