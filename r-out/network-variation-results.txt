@@ -1,0 +1,81 @@
+> print(summary(avgsd))
+Linear mixed-effects model fit by REML
+  Data: rdf 
+  Subset: ewi == "avgsd" 
+        AIC       BIC   logLik
+  -9051.376 -9008.671 4532.688
+
+Random effects:
+ Formula: ~1 | run
+         (Intercept)
+StdDev: 1.739355e-06
+
+ Formula: ~1 | network %in% run
+        (Intercept)
+StdDev:  0.02916788
+
+ Formula: ~1 | nodeset %in% network %in% run
+        (Intercept)    Residual
+StdDev:  0.05496878 0.003801064
+
+Fixed effects:  tau ~ nodeset 
+                    Value   Std.Error   DF  t-value p-value
+(Intercept)     0.8622273 0.001879744 2198 458.6941       0
+nodesetlower    0.0465300 0.002349474 2198  19.8044       0
+nodesetsentinel 0.0144191 0.002349474 2198   6.1372       0
+ Correlation: 
+                (Intr) ndstlw
+nodesetlower    -0.625       
+nodesetsentinel -0.625  0.500
+
+Standardized Within-Group Residuals:
+         Min           Q1          Med           Q3          Max 
+-0.391439083 -0.022496190  0.004412099  0.034340429  0.137920710 
+
+Number of Observations: 3300
+Number of Groups: 
+                          run              network %in% run 
+                           50                          1100 
+nodeset %in% network %in% run 
+                         3300 
+> print(summary(avgac))
+Linear mixed-effects model fit by REML
+  Data: rdf 
+  Subset: ewi == "avgac" 
+        AIC       BIC   logLik
+  -7623.558 -7580.853 3818.779
+
+Random effects:
+ Formula: ~1 | run
+         (Intercept)
+StdDev: 3.314432e-06
+
+ Formula: ~1 | network %in% run
+        (Intercept)
+StdDev:    0.043794
+
+ Formula: ~1 | nodeset %in% network %in% run
+        (Intercept)    Residual
+StdDev:  0.06557368 0.005304883
+
+Fixed effects:  tau ~ nodeset 
+                    Value   Std.Error   DF  t-value p-value
+(Intercept)     0.7684600 0.002382887 2198 322.4912       0
+nodesetlower    0.0585927 0.002805206 2198  20.8871       0
+nodesetsentinel 0.0351782 0.002805206 2198  12.5403       0
+ Correlation: 
+                (Intr) ndstlw
+nodesetlower    -0.589       
+nodesetsentinel -0.589  0.500
+
+Standardized Within-Group Residuals:
+        Min          Q1         Med          Q3         Max 
+-0.35123324 -0.04120422  0.01024045  0.04831644  0.16471170 
+
+Number of Observations: 3300
+Number of Groups: 
+                          run              network %in% run 
+                           50                          1100 
+nodeset %in% network %in% run 
+                         3300 
+> if(save_results) sink()

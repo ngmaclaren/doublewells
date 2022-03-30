@@ -3,39 +3,46 @@
 library(igraph)
 library(doublewells)
     
-## To save the figure outside of this session
-save_plots <- FALSE # TRUE
+                                        # To save the figure outside of this session
+save_plots <- TRUE # FALSE
 imgfile <- "./img/examples-multistage-transition.pdf"
 
-## Run new sims with this seed or load a previous version from disk?
-run_sims <- FALSE # TRUE
+                                        # Run new sims with this seed or load a previous version from
+                                        # disk?
+run_sims <- TRUE # FALSE
 set.seed(123)
 outfile <- "./data/examples-results.rda"
 
-## Networks to use for examples
+                                        # Networks to use for examples
 choices <- c("pref_attach", "dolphins")
 
 if(run_sims) {
-    data(list = choices) ## load the appropriate networks
-
-    df_list <- list() ## storage list
-    ##df_list_alt <- list()
-
-    for(i in 1:length(choices)) {## do the same procedure with both networks
-        g <- get(choices[i]) ## convenient renaming for the network object
-
-        df_list[[i]] <- simulation(g) ## run the simulation and store the results
-       ## df_list_alt[[i]] <- simulation(g, state_check = 75)
+                                        # load the appropriate networks, which are part of the
+                                        # doublewells package
+    data(list = choices) 
+                                        # Store results for both networks
+    df_list <- list() 
+    for(i in 1:length(choices)) {
+                                        # Relabel for convenience
+        g <- get(choices[i]) 
+                                        # Run the simulation with default settings and store the
+                                        # results.
+        df_list[[i]] <- simulation(g)
     }
-
-    examples_results <- df_list ## rename results for saving purposes (because objects that have been saved with save() open as the name they were saved under
+                                        # rename results for saving purposes (because objects that
+                                        # have been saved with save() open as the name they were saved
+                                        # under.
+    examples_results <- df_list 
     save(examples_results, file = outfile)
-} else {## if not running the simulations new
+} else {
+                                        # if not running the simulations new
     load(outfile)
-    df_list <- examples_results ## for convenience, give the results the same name as if sims were run
+                                        # for convenience, give the results the same name as if sims
+                                        # were run
+    df_list <- examples_results 
 }
 
-## Plot results
+                                        # Plot results
 wd <- 10
 ht <- 10
 ewi <- "avgac"
@@ -52,13 +59,11 @@ for(i in 1:length(choices)) {
     df <- df_list[[i]]$results
     columns <- colnames(df)[grep(ewi, colnames(df))]
     plot(df$Ds, df$n_lowerstate,
-         ##type = "p", pch = 1,
          type = "l", lwd = 3, lty = 1,
          col = "darkorchid",
          xlim = range(df$Ds), ylim = ylims[[i]],
          xlab = "D", ylab = "# Nodes in Lower State")
     legend("topright", ncol = 4, bty = "n",
-           ##pch = 1:4,
            lty = 1, lwd = 4,
            col = c("darkorchid", colors),
            legend = c("State", "All", "Lower", "Sentinel")
@@ -67,7 +72,6 @@ for(i in 1:length(choices)) {
     par(new = TRUE)
     plotsamples <- 1:nrow(df)
     matplot(df$Ds[plotsamples], df[plotsamples, columns],
-            ##type = "p", pch = 2:4,
             type = "l", lwd = 2, lty = 1,
             col = colors,
             xlim = range(df$Ds), ylim = c(0, 1), axes = FALSE,

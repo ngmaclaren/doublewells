@@ -7,7 +7,7 @@ save_plots <- FALSE
 save_results <- TRUE # FALSE
 run_sims <- TRUE #  FALSE
 
-which_network <- "dolphins" # "pref_attach" # "dolphins"
+which_network <- "dolphins" # "pref_attach" # 
 filename <- paste0("./data/parameter-variation-results-", which_network, ".rda")
 outfile <- paste0("./r-out/parameter-variation-", which_network, ".txt")
 
