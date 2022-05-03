@@ -7,9 +7,14 @@ library(doublewells)
 save_plots <- TRUE # FALSE
 use_noise <- FALSE # TRUE
 run_simulation <- FALSE # TRUE
+x_is_kdiff <- TRUE # FALSE
+
+outfile <- "./data/kdiff-c-results.rda"
 
 choices <- empiricals # list of empirical networks from doublewells package
 data(list = choices)
+
+stepsize <- 1e-2 # for incrementing u
 
 if(run_simulation) {
     results <- list()
@@ -23,26 +28,28 @@ if(run_simulation) {
         nedges <- ecount(g)
         k <- degree(g)
         CV <- sd(k)/mean(k)
+                                        # Change Monday, April 18, 2022
+        k_diff <- quantile(k, probs = 0.95) - quantile(k, probs = 0.05)
 
         ## Node Systems
         r <- c(1, 2, 5) # double well parameters
         if(use_noise) s <- 0.005 else s <- 0 # sd of noise process
         D <- 0.001 # this is the initial value of D
         p <- if(s > 0) 3*s else 0.015 # perturbation strength
-        u <- .3 # this is the initial value
+        u <- .01 # this is the initial value
         U <- rep(u, nnodes) # stress vector
 
-        τ <- 75 # duration in time units
-        dt <- 0.01 # step size for integration
+        τ <- 30#75 # duration in time units
+        dt <- 0.001#0.01 # step size for integration
         T <- τ/dt
 
-        initialx <- rep(.1, nnodes) + noise(nnodes, s) # initial values of x_i
+        initialx <- rep(.1, nnodes)# + noise(nnodes, s) # initial values of x_i
 
         ## Simulation Parameters
         x <- initialx # an updating vector of x_i
 
-        stepsize <- 1e-2 # for incrementing u
         cutoff <- .1*nnodes # to stop simulation; production value is .1
+        state_cutoff <- 1.5#optimize(dw, c(r[1], r[2]), r = r)$minimum
         in_lowerstate <- V(g) # initial vector of nodes in the lower state (all of them)
 
         ## Storage Vectors
@@ -61,7 +68,7 @@ if(run_simulation) {
             }
             
             ## Exit condition
-            in_lowerstate <- V(g)[which(lowerstate(x) == 1)]
+            in_lowerstate <- V(g)[which(lowerstate(x, cutoff = state_cutoff) == 1)]
             if(length(in_lowerstate) <= cutoff) break
 
             ## Store
@@ -76,14 +83,15 @@ if(run_simulation) {
 
         ## Make Results Data Frame
         df <- data.frame(graph = choice, vcount = vcount(g),
-                         CV = CV, u = us, n_lowerstate = n_lowerstate)
+                         CV = CV, kdiff = k_diff,
+                         u = us, n_lowerstate = n_lowerstate)
         results[[i]] <- df
     }
     results <- do.call(rbind, results)
-    save(results, file = "./data/cv-results.rda")
+    save(results, file = outfile)#"./data/cv-results.rda")
 } else {
-    load("./data/cv-results.rda")
-    stepsize <- results$u[2] - results$u[1]
+    load(outfile)#"./data/cv-results.rda")
+    ##stepsize <- results$u[2] - results$u[1]
 }
     
 
@@ -102,20 +110,42 @@ find_range <- function(df, stepsize = 1e-3) {
 }
 
 dat <- lapply(parts, function(x) {
-    c(range_u = find_range(x), CV = unique(x$CV), nstages = length(unique(x$n_lowerstate)))
+    c(range_u = find_range(x, stepsize),
+      CV = unique(x$CV), kdiff = unique(x$kdiff),
+      nstages = length(unique(x$n_lowerstate)))
 })
 
-df <- do.call(rbind, dat)
-##empirical_rows <- c("dolphins", "jpr", "NNS", "pira", "sn_auth")
+df <- as.data.frame(do.call(rbind, dat))
+df$N <- sapply(rownames(df), function(x) vcount(get(x)))
+df$kdiff_raw <- sapply(rownames(df), function(x) {
+    g <- get(x)
+    k <- degree(g)
+    max(k) - min(k)
+})
 
-ht <- 7
-wd <- 14
-if(save_plots) {
-    pdf("./img/compare-CV-with-u.pdf", height = ht, width = wd)
-} else dev.new(height = ht, width = wd)
-par(mfrow = c(1, 2))
-plot(nstages ~ CV, data = df, pch = 19, col = "firebrick",
-     xlab = "CV of Degree Distribution", ylab = "Number of Stages in Double-Wells Transition")
-plot(range_u ~ CV, data = df, pch = 19, col = "steelblue",
-     xlab = "CV of Degree Distribution", ylab = "Magnitude of Range of u Over Which Transitions Occur")
-if(save_plots) dev.off()
+if(x_is_kdiff) {
+    ht <- 6; wd <- 6
+    if(save_plots) {
+        pdf("./img/compare-kdiff-with-c.pdf", height = ht, width = wd)
+    } else dev.new(height = ht, width = wd)
+    par(mar = c(5, 4, 2, 2) + 0.1)
+    plot(range_u ~ kdiff_raw, data = df, pch = 1, cex = 2, lwd = 1.75, col = "black",
+         cex.lab = 1.25, cex.axis = 1.25,
+         xlim = c(0, 100), ylim = range(df$range_u),
+         ##cex = (df$N/100)*2,
+         xlab = expression(italic(k)[max] - italic(k)[min]),#expression(k[diff]),
+         ylab = "Magnitude of range of u")
+    mtext("(a)", line = -1.3, adj = .01, font = 1, cex = 1.5)
+    if(save_plots) dev.off()
+} else{
+    ht <- 7
+    wd <- 7
+    if(save_plots) {
+        pdf("./img/compare-CV-with-c.pdf", height = ht, width = wd)
+    } else dev.new(height = ht, width = wd)
+    plot(range_u ~ CV, data = df, pch = 1, lwd = 2, col = "black",
+         cex = (df$N/100)*2,
+         xlab = "CV of Degree Distribution",
+         ylab = "Magnitude of Range of u Over Which Transitions Occur")
+    if(save_plots) dev.off()
+}

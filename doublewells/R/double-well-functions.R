@@ -14,7 +14,7 @@ double_well <- function(x, r1, r2, r3, dt, noise = NULL, stress = 0) {
 
 double_well_coupled <- function(x, r1, r2, r3, D, A, dt, noise = NULL, stress = rep(0, length(x))) {
     "Calculates the next step in a double well simulation and network-based coupling. Variables are generally as for `double_well`, with `x` a vector of current states, D as the coupling strength, and A as the adjacency matrix. The `noise` argument if not NULL should be a function that generates a vector of random values of length equal to the length of x."
-    if(is.null(noise)) {
+    if(is.null(noise)) {# rowSums; test for re-run
         deltax <- (-(x - r1)*(x - r2)*(x - r3) + D*colSums(A*x) + stress)*dt
     } else {
         deltax <- (-(x - r1)*(x - r2)*(x - r3) + D*colSums(A*x) + stress)*dt + noise
@@ -55,25 +55,70 @@ metapopulation <- function(x, K, h, A, D, dt = 0.01, noise = NULL) {
     nextx
 }
 
-mutualistic <- function(x, A, D, model_params = list(B = 0.1, K = 5, C = 1, E = 5, H = 0.9, I = 0.1),
-                        dt = 0.01, s = 0.01, noise = rnorm(length(x), mean = 0, sd = s*sqrt(dt))) {
-    "Ref is Kundu et al. 2022."
-    B <- model_params$B
-    K <- model_params$K
-    C <- model_params$C
-    E <- model_params$E
-    H <- model_params$H
-    I <- model_params$I
+## mutualistic <- function(x, A, D, model_params = list(B = 0.1, K = 5, C = 1, E = 5, H = 0.9, I = 0.1),
+##                         dt = 0.01, s = 0.01, noise = rnorm(length(x), mean = 0, sd = s*sqrt(dt))) {
+##     "Ref is Kundu et al. 2022."
+##     B <- model_params$B
+##     K <- model_params$K
+##     C <- model_params$C
+##     E <- model_params$E
+##     H <- model_params$H
+##     I <- model_params$I
 
-                                        # Same set up as above, but with more steps to match the model
-    x_j <- matrix(rep(x, nrow(A)), byrow = TRUE, nrow = nrow(A))
-    x_i <- matrix(rep(x, ncol(A)), byrow = FALSE, ncol = ncol(A))
-    xi_xj <- (x_i*x_j)/(E + (H*x_i) + (I*x_j))
+##                                         # Same set up as above, but with more steps to match the model
+##     x_j <- matrix(rep(x, nrow(A)), byrow = TRUE, nrow = nrow(A))
+##     x_i <- matrix(rep(x, ncol(A)), byrow = FALSE, ncol = ncol(A))
+##     xi_xj <- (x_i*x_j)/(E + (H*x_i) + (I*x_j))
         
-    deltax <- (B + x*((1 - (x/K))*((x/C) - 1)) + D*colSums(A*xi_xj))*dt + noise
-    nextx <- x + deltax
+##     deltax <- (B + x*((1 - (x/K))*((x/C) - 1)) + D*colSums(A*xi_xj))*dt + noise
+##     nextx <- x + deltax
+##     nextx
+## }
+
+md <- function(x, K, C) {
+    "The node dynamics for the mutualistic system of Gao et al 2016."
+    x*(1 - (x/K))*((x/C) - 1)
+}
+
+mutualistic <- function(
+                                        # a vector of states
+                        x
+                                        # A (weighted) adjacency matrix
+                      , A
+                                        # The parameter fw will proportionately decrease the coupling
+                                        # term. If fw = 1, there is no effect.
+                                        #
+                                        # Changing this around from Gao et al 2016 to make it more
+                                        # like D in the doublewell model.
+                      , fw = 0
+                                        # migration rate
+                      , B = 0.1
+                                        # environment carrying capacity
+                      , K = 5
+                                        # Allee constant
+                      , C = 1 
+                                        # D, E, and H are the parameters of the "saturation rate of
+                                        # the response function"
+                      , D = 5 
+                      , E = 0.9
+                      , H = 0.1
+                                        # strength of the noise process
+                      , s = 0.05
+                                        # the noise process
+                      , noise = function(x, s) rnorm(length(x), sd = s)
+                                        # Δt for integration
+                      , dt = 0.01
+                        ) {
+    ##XI <- matrix(rep(x, times = length(x)), byrow = FALSE, ncol = length(x))
+    ##XJ <- matrix(rep(x, times = length(x)), byrow = TRUE, nrow = length(x))
+    ##diffusion <- (XI * XJ)/(D + (E*XI) + (H*XJ))
+    ##coupling <- fw*A * diffusion
+    cX <- outer(x, x, function(xi, xj) (xi*xj)/(D + E*xi + H*xj))
+    diffx <- (B + x*(1 - (x/K))*((x/C) - 1) + fw*rowSums(A*cX))*dt + noise(x, s)*sqrt(dt)
+    nextx <- x + diffx
     nextx
 }
+
 
 noise <- function(n, s, f = rnorm) {
     "A function to generate `n` random noise values from a distribution with standard deviation `s`. Currently set up only for Gaussian noise, but could be expanded to support more distributions."
@@ -204,7 +249,8 @@ CVk <- function(g) {
     sd(k)/mean(k)
 }
 
-Kendall_correlations <- function(df, constrain = TRUE, cutoff = 15) {
+Kendall_correlations <- function(df, constrain = TRUE, cutoff = 15, check_alts = FALSE,
+                                 b_param = "Ds") {
     "This function relies on the exact output data frame of the simulation() function: it takes that data frame as input and returns a list with (1) a matrix of mean Kendall correlations, and (2) the standard deviation of those correlations. By default (`constrain = TRUE`) this function will only return computed mean/sd of correlations based on a 'sufficient' amount of data---that is, when the correlation was computed from at least `cutoff` pairs of values for D and the early warning indicator."
                                         # Select the columns with early warning indicator values
     columns <- colnames(df)[
@@ -212,10 +258,25 @@ Kendall_correlations <- function(df, constrain = TRUE, cutoff = 15) {
           grep("_lower", colnames(df)),
           grep("_sentinel", colnames(df)))
     ]
+                                        # There are more columns if checking alternates
+    columns <- c(columns, colnames(df)[
+                              c(grep("_upper", colnames(df)),
+                                grep("_antisentinel", colnames(df)),
+                                grep("_altsentinel", colnames(df)),
+                                grep("_lowrank", colnames(df))
+                                )
+                          ])
+                                        # n_lowerstate shouldn't be in this vector, but it's returned
+                                        # by the grep statement above
+    columns <- columns[which(columns != "n_lowerstate")]
                                         # Split-Apply-Combine
                                         # SPLIT the data frame so that each grouping has the same
                                         # number of nodes in the lower state.
     dfsplit <- split(df, factor(df$n_lowerstate))
+                                        # Try the constrain step here
+                                        # It makes sense to ignore data where a Kendall correlation
+                                        # was calculated only for a few rows.
+    if(constrain) dfsplit <- dfsplit[which(sapply(dfsplit, nrow) >= cutoff)]
                                         # APPLY 
     kendalls <- lapply(dfsplit, function(x) {
                                         # warns that sd == 0 in some cases (when there is only one
@@ -223,11 +284,12 @@ Kendall_correlations <- function(df, constrain = TRUE, cutoff = 15) {
         suppressWarnings(
                                         # Calculate the Kendall (rank order) correlation between the
                                         # bifurcation parameter and each early warning indicator.
-            cor(x[, c("Ds", columns)], method = "kendall",
+            cor(x[, c(b_param, columns)], method = "kendall",
                                         # Ignore NAs, but keeping as much of the data as possible.
                                         # Take only the top row, dropping the first column (which has
                                         # the correlation of D with itself.
                 use = "pairwise.complete.obs")[1, -1]
+                ##use = "complete.obs")[1, -1]
         )
     })
                                         # COMBINE
@@ -239,7 +301,7 @@ Kendall_correlations <- function(df, constrain = TRUE, cutoff = 15) {
     kendalls$n_steps <- sapply(dfsplit, nrow)
                                         # It makes sense to ignore data where a Kendall correlation
                                         # was calculated only for a few rows.
-    if(constrain) kendalls <- kendalls[kendalls$n_steps >= cutoff, ]
+    ##if(constrain) kendalls <- kendalls[kendalls$n_steps >= cutoff, ]
                                         # Collect both the means and st devs of the Kendall
                                         # correlations. As of now, only the means are used down
                                         # stream as these sds are not based on independent
@@ -293,8 +355,10 @@ generate_network <- function(choice = c("random_regular", "max_entropy", "sphere
 ## Algorithm Support Functions
 
 choose_sentinels <- function(g, X, samples, n = 5, cutoff = 2.5,
-                             state_check = samples[length(samples)]) {
+                             state_check = samples[length(samples)],
+                             indicator_func = "lowerstate") {
     "Choose `n` sentinel nodes in a graph `g` based on the AVERAGE state of the x_i in `X` over the time step window, length `wl`, ending at `t`."
+    indicator <- get(indicator_func)
                                         # By default, this function will check for the "macro" state
                                         # (e.g., is a node in the lower state?) at the end of the
                                         # simulated sequence. However, in the simulation() function
@@ -302,7 +366,7 @@ choose_sentinels <- function(g, X, samples, n = 5, cutoff = 2.5,
     x <- X[state_check, ]
                                         # Nodes are available to be sentinels if, at the state check
                                         # time point, those nodes are below the given cutoff in x_i.
-    avail <- V(g)[which(lowerstate(x, cutoff = cutoff) == 1)]
+    avail <- V(g)[which(indicator(x, cutoff = cutoff) == 1)]
                                         # Nodes will be ranked based on their AVERAGE STATE over all
                                         # samples of x_i. By default, this function only checks the
                                         # state of nodes that are neighbors of those nodes in the
@@ -311,10 +375,53 @@ choose_sentinels <- function(g, X, samples, n = 5, cutoff = 2.5,
     ranks <- sapply(avail, function(v) sum(colMeans(as.matrix(X[samples, neighbors(g, v)]))))
                                         # Then, sort nodes based on their score in `ranks`
     df <- data.frame(avail = as.numeric(avail), ranks)
-    df <- df[order(df$ranks, decreasing = TRUE), ]
+    if(indicator_func == "lowerstate") {
+        df <- df[order(df$ranks, decreasing = TRUE), ]
+    } else if(indicator_func == "upperstate") {
+        df <- df[order(df$ranks, decreasing = FALSE), ]
+    }
                                         # and choose the highest scoring `n` nodes as the sentinels
     V(g)[df$avail[1:n]]
 }
+
+choose_lowrank <- function(g, X, samples, cutoff = 2.5, state_check = samples[length(samples)]) {
+    "Choose the lowest ranking of the available nodes as the sentinels. This function uses the same ranking scheme as choose_sentinels. Hard-coded to split ranks at the median."
+    x <- X[state_check, ]
+    avail <- V(g)[which(lowerstate(x, cutoff = cutoff) == 1)]
+    ranks <- sapply(avail, function(v) sum(colMeans(as.matrix(X[samples, neighbors(g, v)]))))
+    df <- data.frame(avail = as.numeric(avail), ranks)
+    V(g)[df$avail[which(df$ranks < median(df$ranks))]]
+}
+
+choose_antisentinels <- function(g, sentinels, n = 5) {
+    "Choose `n` 'anti-sentinels': select `n` nodes at random from g that are not designated sentinel nodes."
+                                        # Available nodes are ANY nodes which are not designated as
+                                        # sentinels.
+    avail <- V(g)[which(!(V(g) %in% sentinels))]
+                                        # Select antisentinels completely at random from the
+                                        # available nodes.
+    antisentinels <- V(g)[sample(avail, n)]
+                                        # Return the node vector
+    return(antisentinels)
+}
+
+choose_altsentinels <- function(X, samples, n = 5, cutoff = 2.5, state_check = nrow(X) - length(samples) - 1) {
+    "Choose `n` sentinel nodes without using information from the network."
+    ## For tomorrow (Apr 19): this isn't going the right direction. Review the working choose_sentinels above and apply a similar method using the new formula.
+    x <- X[state_check, ]
+    lower <- which(lowerstate(x, cutoff = cutoff) == 1)
+    lnodes <- X[samples, lower]
+    unodes <- X[samples, -lower]
+    if(dim(unodes)[2] == 0) return(rep(NA, n))
+    
+    ranks <- apply(lnodes, 2, function(u) sum(cor(u, unodes)))
+            
+    df <- data.frame(avail = lower, ranks)
+    df <- df[order(df$ranks, decreasing = TRUE), ]
+    return(df$avail[1:n])
+}
+
+    
 
 ## Counting Functions
 
@@ -333,6 +440,11 @@ lowerstate <- function(x, cutoff = 2.3) {
 dw <- function(x, r) {
     "This is the basic double well differential equation. For finding minima/maxima."
     -(x - r[1])*(x - r[2])*(x - r[3])
+}
+
+md <- function(x, K, C) {
+    "The node dynamics for the mutualistic system of Gao et al 2016."
+    x*(1 - (x/K))*((x/C) - 1)
 }
 
 simulation <- function(g
@@ -375,6 +487,8 @@ simulation <- function(g
                                         # simulation, allowing for 250 samples while the system is
                                         # expected to be at equilibrium.
                      , state_check = TU - 25
+                                        # Should simulation check antisentinels and upper state nodes?
+                     , check_alts = FALSE
                        ) {
     "This function simulates a multi-node double well system over increasing values of the connection strength, D, between nodes. It returns a data frame with the state of the system after each round of integration and the value of each early warning indicator in that iteration. The process takes some time, particularly for larger networks (max attempted has about 375 nodes)."
                                         # Calculate the cutoff value for what constitutes being in
@@ -383,6 +497,10 @@ simulation <- function(g
                                         # r_1 and r_2; above that local minimum, x_i will be "pulled"
                                         # towards, and then past, the separatrix (r_2).
     if(is.null(state_cutoff)) state_cutoff <- optimize(dw, c(r[1], r[2]), r = r)$minimum
+                                        # If checking alternatives, need the local maximum as well
+    if(check_alts) {
+        upper_state_cutoff <- optimize(dw, c(r[2], r[3]), r = r, maximum = TRUE)$maximum
+    }
                                         # Record the total number of nodes in g for later use.
     nnodes <- vcount(g)
                                         # And make the adjacency matrix.
@@ -426,6 +544,38 @@ simulation <- function(g
     avgac <- list(all = numeric(), lower = numeric(), sentinel = numeric())
     sentinel_history <- list()
     if(check_equil) equils <- list()
+
+                                        # If checking alternatives each storage vector needs two
+                                        # additional positions
+    if(check_alts) {
+        maxeig$upper <- numeric()
+        maxeig$lower_bottom <- numeric()
+        maxeig$lowrank <- numeric()
+        maxeig$antisentinel <- numeric()
+        maxeig$altsentinel <- numeric()
+        maxsd$upper <- numeric()
+        maxsd$lower_bottom <- numeric()
+        maxsd$lowrank <- numeric()
+        maxsd$antisentinel <- numeric()
+        maxsd$altsentinel <- numeric()
+        avgsd$upper <- numeric()
+        avgsd$lower_bottom <- numeric()
+        avgsd$lowrank <- numeric()
+        avgsd$antisentinel <- numeric()
+        avgsd$altsentinel <- numeric()
+        maxac$upper <- numeric()
+        maxac$lower_bottom <- numeric()
+        maxac$lowrank <- numeric()
+        maxac$antisentinel <- numeric()
+        maxac$altsentinel <- numeric()
+        avgac$upper <- numeric()
+        avgac$lower_bottom <- numeric()
+        avgac$lowrank <- numeric()
+        avgac$antisentinel <- numeric()
+        avgac$altsentinel <- numeric()
+        antisentinel_history <- list()
+        altsentinel_history <- list()
+    }
 
     ## Main Simulation Loop
     i <- 1
@@ -472,12 +622,40 @@ simulation <- function(g
                                         # neighbors across samples of X.
         sentinels <- choose_sentinels(g, X, samples, n = n_sentinels,
                                       cutoff = state_cutoff, state_check = state_check)
-
+                                        # Collect additional node vectors if checking alternatives
+        if(check_alts) {
+            in_upperstate <- V(g)[
+                which(upperstate(X[state_check, ], cutoff = upper_state_cutoff) == 1)
+            ]
+            lower_bottom <- in_lowerstate[
+                which(x[in_lowerstate] < quantile(x[in_lowerstate], probs = .5))
+            ]
+            lowrank <- choose_lowrank(g, X, samples, cutoff = state_cutoff, state_check = state_check)
+            antisentinels <- choose_antisentinels(g, sentinels, n_sentinels)
+            altsentinels <- choose_altsentinels(X, samples,
+                                                cutoff = state_cutoff, state_check = state_check)
+        }
+        
         ## Calculate and Store
                                         # These functions are documented above.
         maxeig$all[i] <- sampled_eigenmethod(X, samples = samples, nodes = V(g))
         maxeig$lower[i] <- sampled_eigenmethod(X, samples = samples, nodes = in_lowerstate)
         maxeig$sentinel[i] <- sampled_eigenmethod(X, samples = samples, nodes = sentinels)
+        if(check_alts) {
+            if(length(in_upperstate) > 0) {
+                maxeig$upper[i] <- sampled_eigenmethod(X, samples = samples, nodes = in_upperstate)
+                maxeig$lowrank[i] <- sampled_eigenmethod(X, samples = samples, nodes = lowrank)
+                maxeig$altsentinel[i] <- sampled_eigenmethod(X, samples = samples,
+                                                             nodes = altsentinels)
+
+            } else {
+                maxeig$upper[i] <- NA
+                maxeig$lowrank[i] <- NA
+                maxeig$altsentinel[i] <- NA
+            }
+            maxeig$lower_bottom[i] <- sampled_eigenmethod(X, samples = samples, nodes = lower_bottom)
+            maxeig$antisentinel[i] <- sampled_eigenmethod(X, samples = samples, nodes = antisentinels)
+        }
 
                                         # The standard deviation indicator is the most
                                         # straightforward and is calculated directly here, but in the
@@ -486,6 +664,15 @@ simulation <- function(g
         sds$all <- apply(X[samples, ], 2, sd)
         sds$lower <- apply(X[samples, in_lowerstate], 2, sd)
         sds$sentinel <- apply(X[samples, sentinels], 2, sd)
+        if(check_alts) {
+            if(length(in_upperstate) > 0) {
+                sds$upper <- apply(X[samples, in_upperstate], 2, sd)
+            } else sds$upper <- rep(NA, ncol(X))
+            sds$lower_bottom <- apply(X[samples, lower_bottom], 2, sd)
+            sds$lowrank <- apply(X[samples, lowrank], 2, sd)
+            sds$antisentinel <- apply(X[samples, antisentinels], 2, sd)
+            sds$altsentinel <- apply(X[samples, altsentinels], 2, sd)
+        }
 
         for(j in 1:length(sds)) maxsd[[j]][i] <- max(sds[[j]])
         for(j in 1:length(sds)) avgsd[[j]][i] <- mean(sds[[j]])
@@ -494,6 +681,15 @@ simulation <- function(g
         acs$all <- sampled_acmethod(X, samples, lag = lag)
         acs$lower <- sampled_acmethod(X[, in_lowerstate], samples, lag = lag)
         acs$sentinel <- sampled_acmethod(X[, sentinels], samples, lag = lag)
+        if(check_alts) {
+            if(length(in_upperstate) > 0) {
+                acs$upper <- sampled_acmethod(X[, in_upperstate], samples, lag = lag)
+            } else acs$upper <- rep(NA, ncol(X))
+            acs$lower_bottom <- sampled_acmethod(X[, lower_bottom], samples, lag = lag)
+            acs$lowrank <- sampled_acmethod(X[, lowrank], samples, lag = lag)
+            acs$antisentinel <- sampled_acmethod(X[, antisentinels], samples, lag = lag)
+            acs$altsentinel <- sampled_acmethod(X[, altsentinels], samples, lag = lag)
+        }
 
         for(j in 1:length(acs)) maxac[[j]][i] <- max(acs[[j]])
         for(j in 1:length(acs)) avgac[[j]][i] <- mean(acs[[j]])
@@ -501,6 +697,10 @@ simulation <- function(g
         Ds[i] <- D
         n_lowerstate[i] <- length(in_lowerstate)
         sentinel_history[[i]] <- sentinels
+        if(check_alts) {
+            antisentinel_history[[i]] <- antisentinels
+            altsentinel_history[[i]] <- altsentinels
+        }
 
         ## Iterate
         D <- D + stepsize
@@ -521,6 +721,10 @@ simulation <- function(g
     colnames(avgac) <- paste("avgac", colnames(avgac), sep = "_")
 
     sentinel_history <- do.call(rbind, sentinel_history)
+    if(check_alts) {
+        antisentinel_history <- do.call(rbind, antisentinel_history)
+        altsentinel_history <- do.call(rbind, altsentinel_history)
+    }
 
     ## Collect data for analysis, and return the results.
     df <- data.frame(
@@ -529,10 +733,16 @@ simulation <- function(g
     )
     df <- cbind(df, maxeig, maxsd, avgsd, maxac, avgac)
 
+    if(!check_alts) {
+        antisentinel_history <- NULL
+        altsentinel_history <- NULL
+    }
+    
     if(check_equil) {
         return(list(
-            results = df, sentinels = sentinel_history, equil = equils))
+            results = df, sentinels = sentinel_history, equil = equils,
+            antisentinels = antisentinel_history))
     } else {
-        return(list(results = df, sentinels = sentinel_history))
+        return(list(results = df, sentinels = sentinel_history, antisentinels = antisentinel_history))
     }
 }

@@ -180,7 +180,7 @@ hall <- convert(hall)
 highschool_boys <- convert(highschool_boys)
 surfersb <- convert(surfersb)
 
-# Store these networks in the appropriate place.
+                                        # Store these networks in the appropriate place.
 for(i in 1:length(empiricals)) {
     filename <- paste0(fileloc, empiricals[i], ".rda")
     if(save_files) save(list = c(empiricals[i]), file = filename)

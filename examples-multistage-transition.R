@@ -4,14 +4,17 @@ library(igraph)
 library(doublewells)
     
                                         # To save the figure outside of this session
-save_plots <- TRUE # FALSE
+save_plots <- FALSE # TRUE
 imgfile <- "./img/examples-multistage-transition.pdf"
 
                                         # Run new sims with this seed or load a previous version from
                                         # disk?
-run_sims <- TRUE # FALSE
+run_sims <- FALSE # TRUE
 set.seed(123)
 outfile <- "./data/examples-results.rda"
+                                        # Save results for tables?
+save_results <- FALSE # TRUE
+r_outfile <- "./r-out/examples-results.txt"
 
                                         # Networks to use for examples
 choices <- c("pref_attach", "dolphins")
@@ -27,7 +30,7 @@ if(run_sims) {
         g <- get(choices[i]) 
                                         # Run the simulation with default settings and store the
                                         # results.
-        df_list[[i]] <- simulation(g)
+        df_list[[i]] <- simulation(g)#, check_alts = TRUE)
     }
                                         # rename results for saving purposes (because objects that
                                         # have been saved with save() open as the name they were saved
@@ -46,7 +49,7 @@ if(run_sims) {
 wd <- 10
 ht <- 10
 ewi <- "avgac"
-colors <- c("sienna", "navy", "olivedrab")
+colors <- rev( c("sienna", "navy", "olivedrab") )#, "cyan", "chartreuse") )
 ylims <- list(
     c(0, 110),
     c(0, 70)
@@ -57,16 +60,17 @@ if(save_plots) {
 par(mfrow = c(2, 1), mar = c(5, 4, 4, 4)+.1, xpd = TRUE) #13
 for(i in 1:length(choices)) {
     df <- df_list[[i]]$results
-    columns <- colnames(df)[grep(ewi, colnames(df))]
-    plot(df$Ds, df$n_lowerstate,
+    df$p_lowerstate <- round((df$n_lowerstate/max(df$n_lowerstate))*100)
+    columns <- rev( colnames(df)[grep(ewi, colnames(df))] )
+    plot(df$Ds, df$p_lowerstate,#df$n_lowerstate,
          type = "l", lwd = 3, lty = 1,
          col = "darkorchid",
-         xlim = range(df$Ds), ylim = ylims[[i]],
-         xlab = "D", ylab = "# Nodes in Lower State")
+         xlim = range(df$Ds), ylim = c(0, 100),#ylims[[i]],
+         xlab = expression(italic(D)), ylab = "% Nodes in Lower State")#"D"
     legend("topright", ncol = 4, bty = "n",
            lty = 1, lwd = 4,
-           col = c("darkorchid", colors),
-           legend = c("State", "All", "Lower", "Sentinel")
+           col = c("darkorchid", rev(colors)),
+           legend = c("State", "All", "Lower", "Sentinel")#, "Upper", "Anti-Sentinel")
            )
     mtext(LETTERS[i], adj = 0.01, line = -1.5, cex = 1.5, font = 2)
     par(new = TRUE)
@@ -80,6 +84,18 @@ for(i in 1:length(choices)) {
     mtext("Average Autocorrelation",side = 4, cex = 1, font = 1, line = 3)
 }
 if(save_plots) dev.off()
+
+if(save_results) {
+    sink(r_outfile, append = FALSE, type = "output", split = TRUE)
+    for(i in 1:length(choices)) {
+        df <- df_list[[i]]$results
+        corr_results <- Kendall_correlations(df)
+        print(choices[i])
+        print(corr_results$means)
+    }
+}
+
+
 
 ## old code for testing
 ## cor(df_list[[1]]$Ds[df_list[[1]]$n_lowerstate == 100], df_list[[1]]$avgac_all[df_list[[1]]$n_lowerstate == 100], method = "kendall")

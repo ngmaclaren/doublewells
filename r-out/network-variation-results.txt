@@ -1,4 +1,81 @@
-> print(summary(avgsd))
+Linear mixed-effects model fit by REML
+  Data: rdf 
+  Subset: ewi == "maxeig" 
+       AIC      BIC logLik
+  -12529.4 -12486.7 6271.7
+
+Random effects:
+ Formula: ~1 | run
+         (Intercept)
+StdDev: 1.657909e-06
+
+ Formula: ~1 | network %in% run
+        (Intercept)
+StdDev:  0.03223178
+
+ Formula: ~1 | nodeset %in% network %in% run
+        (Intercept)   Residual
+StdDev:  0.02688065 0.00523818
+
+Fixed effects:  tau ~ nodeset 
+                    Value   Std.Error   DF  t-value p-value
+(Intercept)     0.8200136 0.001275252 2198 643.0207  0.0000
+nodesetlower    0.0013582 0.001167755 2198   1.1631  0.2449
+nodesetsentinel 0.0130600 0.001167755 2198  11.1839  0.0000
+ Correlation: 
+                (Intr) ndstlw
+nodesetlower    -0.458       
+nodesetsentinel -0.458  0.500
+
+Standardized Within-Group Residuals:
+         Min           Q1          Med           Q3          Max 
+-0.748533689 -0.100235967  0.004735892  0.100211248  0.845009960 
+
+Number of Observations: 3300
+Number of Groups: 
+                          run              network %in% run 
+                           50                          1100 
+nodeset %in% network %in% run 
+                         3300 
+Linear mixed-effects model fit by REML
+  Data: rdf 
+  Subset: ewi == "maxsd" 
+        AIC       BIC   logLik
+  -14986.47 -14943.76 7500.233
+
+Random effects:
+ Formula: ~1 | run
+         (Intercept)
+StdDev: 1.464252e-06
+
+ Formula: ~1 | network %in% run
+        (Intercept)
+StdDev:  0.02893744
+
+ Formula: ~1 | nodeset %in% network %in% run
+        (Intercept)    Residual
+StdDev:  0.01635058 0.004563922
+
+Fixed effects:  tau ~ nodeset 
+                    Value    Std.Error   DF  t-value p-value
+(Intercept)     0.8277145 0.0010115453 2198 818.2674  0.0000
+nodesetlower    0.0008618 0.0007238418 2198   1.1906  0.2339
+nodesetsentinel 0.0053391 0.0007238418 2198   7.3760  0.0000
+ Correlation: 
+                (Intr) ndstlw
+nodesetlower    -0.358       
+nodesetsentinel -0.358  0.500
+
+Standardized Within-Group Residuals:
+         Min           Q1          Med           Q3          Max 
+-1.323762160 -0.102946723 -0.005160251  0.105560367  1.274422868 
+
+Number of Observations: 3300
+Number of Groups: 
+                          run              network %in% run 
+                           50                          1100 
+nodeset %in% network %in% run 
+                         3300 
 Linear mixed-effects model fit by REML
   Data: rdf 
   Subset: ewi == "avgsd" 
@@ -38,7 +115,45 @@ Number of Groups:
                            50                          1100 
 nodeset %in% network %in% run 
                          3300 
-> print(summary(avgac))
+Linear mixed-effects model fit by REML
+  Data: rdf 
+  Subset: ewi == "maxac" 
+        AIC       BIC  logLik
+  -11355.56 -11312.85 5684.78
+
+Random effects:
+ Formula: ~1 | run
+         (Intercept)
+StdDev: 3.239079e-06
+
+ Formula: ~1 | network %in% run
+        (Intercept)
+StdDev:  0.04104538
+
+ Formula: ~1 | nodeset %in% network %in% run
+        (Intercept)    Residual
+StdDev:  0.03114958 0.007099941
+
+Fixed effects:  tau ~ nodeset 
+                    Value   Std.Error   DF  t-value p-value
+(Intercept)     0.7205427 0.001568273 2198 459.4498  0.0000
+nodesetlower    0.0008409 0.001362288 2198   0.6173  0.5371
+nodesetsentinel 0.0300827 0.001362288 2198  22.0825  0.0000
+ Correlation: 
+                (Intr) ndstlw
+nodesetlower    -0.434       
+nodesetsentinel -0.434  0.500
+
+Standardized Within-Group Residuals:
+         Min           Q1          Med           Q3          Max 
+-1.014300551 -0.090153476  0.009481168  0.095715672  1.118306351 
+
+Number of Observations: 3300
+Number of Groups: 
+                          run              network %in% run 
+                           50                          1100 
+nodeset %in% network %in% run 
+                         3300 
 Linear mixed-effects model fit by REML
   Data: rdf 
   Subset: ewi == "avgac" 
@@ -78,4 +193,3 @@ Number of Groups:
                            50                          1100 
 nodeset %in% network %in% run 
                          3300 
-> if(save_results) sink()

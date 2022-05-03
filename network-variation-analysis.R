@@ -91,9 +91,18 @@ rdf <- do.call(rbind, rdf_list)
                                         # simulation runs. There are 22 networks and 50 simulation
                                         # runs.
 
-                                        # The model for the average standard deviation indicator
+                                        # The model for the maximum eigenvalue indicator...
+maxeig <- lme(tau ~ nodeset, random = ~ 1 | run/network/nodeset,
+              data = rdf, subset = ewi == "maxeig")
+                                        # the maximum standard deviation...
+maxsd <- lme(tau ~ nodeset, random = ~ 1 | run/network/nodeset,
+             data = rdf, subset = ewi == "maxsd")
+                                        # average standard deviation...
 avgsd <- lme(tau ~ nodeset, random = ~ 1 | run/network/nodeset,
              data = rdf, subset = ewi == "avgsd")
+                                        # maximum autocorrelation
+maxac <- lme(tau ~ nodeset, random = ~ 1 | run/network/nodeset,
+             data = rdf, subset = ewi == "maxac")
                                         # and for the average autocorrelation coefficient.
 avgac <- lme(tau ~ nodeset, random = ~ 1 | run/network/nodeset,
              data = rdf, subset = ewi == "avgac")
@@ -105,7 +114,10 @@ if(save_results) {
          split = TRUE)
 }
                                         # Print the results to the console (and connection)
+print(summary(maxeig))
+print(summary(maxsd))
 print(summary(avgsd))
+print(summary(maxac))
 print(summary(avgac))
                                         # and turn off the connection.
 if(save_results) sink()
@@ -127,50 +139,86 @@ get_values <- function(model) {
 
     df <- as.data.frame(t(rbind(lowers, ests, uppers)))
     ## df <- df[c(2, 1, 3), ] # needed if lower is the ref in the model
+    colnames(df) <- c("lower", "est", "upper")
     rownames(df) <- c("all", "lower", "sentinel")
     df
 }
 
 plotvals <- list(
+    maxeig = get_values(maxeig),
+    maxsd = get_values(maxsd),
     avgsd = get_values(avgsd),
+    maxac = get_values(maxac),
     avgac = get_values(avgac)
 )
 
-colors <- c(
-    "sienna", # all
-    "navy", # lower
-    "olivedrab" # sentinel
+for(i in 1:length(plotvals)) {
+    plotvals[[i]]$set <- rownames(plotvals[[i]])
+    plotvals[[i]]$signal <- names(plotvals)[i]
+}
+plotvals <- do.call(rbind, plotvals)
+rownames(plotvals) <- NULL
+
+signals <- c("maxeig", "maxsd", "avgsd", "maxac", "avgac")
+plotvals$signal <- factor(plotvals$signal, levels = signals)
+nodesets <- c("all", "lower", "sentinel")
+plotvals$set <- factor(plotvals$set, levels = nodesets)
+plotvals$signal_ <- rev(as.numeric(plotvals$signal))
+plotvals$set_ <- as.numeric(plotvals$set)
+
+## colors <- c(
+##     "sienna", # all
+##     "navy", # lower
+##     "olivedrab" # sentinel
+## )
+five_ten <- c(
+    "#80065d", "#f86c2a", "#59f9d4", "#235d74", "#fed803", "#5d8006", "#2abef8", "#f97959", "#743d23", "#c637fe"
 )
+pal <- five_ten
+palette(pal)
+
                                         # This block makes the ladder plot based on the calculated
                                         # values from get_values().
-plot_errorbars <- FALSE
-yticklabels <- c("Average Standard Deviation", "Average Autocorrelation")
-legendlabels <- c("All Nodes", "Lower State Nodes", "Sentinel Nodes")
-ht <- 7
-wd <- 8
-if(plot_errorbars) pchs <- 4 else pchs <- 15:17
-pchcex <- 2
+
+plot_errorbars <- TRUE # FALSE
+## yticklabels <- c("Maximum Autocorrelation", #"Average Standard Deviation",
+##                  "Average Autocorrelation")
+yticklabels <- c("Dom. Eig.", "Max. SD", "Avg. SD", "Max. AC", "Avg. AC")
+##legendlabels <- c("All Nodes", "Lower State Nodes", "Sentinel Nodes")
+legendlabels <- c("All", "Lower State", "Sentinel")
+ht <- 3.5
+wd <- 3.5*3
+if(plot_errorbars) pchs <- 3 else pchs <- 15:17
+pchcex <- 1
+lwd <- 3
 if(save_plots) {
     pdf("./img/kendall-corr-figure.pdf", width = wd, height = ht)
 } else dev.new(width = wd, height = ht)
-par(mar = c(5, 12, 1, 1) + 0.1)
-ylims <- c(.5, 2.5)
-plot(NULL, ylim = ylims, xlim = c(0.45, .95), #xlim = c(min(lowers)*.9, max(uppers)*1.1),
-     ylab = "", xlab = expression(tau), yaxt = "n")
-axis(side = 2, tick = FALSE, labels = yticklabels, at = 2:1, las = 1)
-ypos <- 2 + c((1/3), 0, -(1/3))
-points(plotvals[[1]]$ests, ypos, pch = pchs, col = colors, cex = pchcex)
+par(mar = c(5, 5, 1, 1) + 0.1)
+ylims <- range(plotvals$signal_) + c(-.5, .5)
+xlims <- c(.7, 1)
+plot(NULL, ylim = ylims, xlim = xlims, #xlim = c(min(lowers)*.9, max(uppers)*1.1),
+     ylab = "", xlab = expression(tau), yaxt = "n", bty = "n")
+axis(side = 2, tick = FALSE, labels = yticklabels, at = max(plotvals$signal_):1, las = 1)
+##ypos <- 2 + c((1/3), 0, -(1/3))
+points(signal_ ~ est, data = plotvals, pch = pchs, lwd = lwd, col = plotvals$set_, cex = pchcex)
 if(plot_errorbars) {
-    segments(x0 = plotvals[[1]]$lowers, x1 = plotvals[[1]]$uppers, y0 = ypos,
-             lty = 1, lwd = 2, col = colors)
+    segments(x0 = plotvals$lower, x1 = plotvals$upper, y0 = plotvals$signal_,
+             lty = 1, lwd = lwd, col = plotvals$set_)
 }
-abline(h = 1.5, col = "gray", lwd = .5, lty = 1)
-ypos <- 1 + c((1/3), 0, -(1/3))
-points(plotvals[[2]]$ests, ypos, pch = pchs, col = colors, cex = pchcex)
-if(plot_errorbars) {
-    segments(x0 = plotvals[[2]]$lowers, x1 = plotvals[[2]]$uppers, y0 = ypos,
-             lty = 1, lwd = 2, col = colors)
-}
-legend("bottomleft", legend = legendlabels,
-       col = colors, bty = "n", pch = pchs)#, lty = 1, lwd = 1)#, pt.cex = 2)
+legend("bottomright", legend = legendlabels, col = 1:3, bty = "n", pch = 3, pt.lwd = lwd)
 if(save_plots) dev.off()
+
+##abline(h = 1.5, col = "gray", lwd = .5, lty = 1)
+## ypos <- 1 + c((1/3), 0, -(1/3))
+## points(plotvals[[2]]$ests, ypos, pch = pchs, col = colors, cex = pchcex)
+## if(plot_errorbars) {
+##     segments(x0 = plotvals[[2]]$lowers, x1 = plotvals[[2]]$uppers, y0 = ypos,
+##              lty = 1, lwd = 2, col = colors)
+## }
+## legend("bottomleft", legend = legendlabels,
+##        col = 1:length(legendlabels), bty = "n", pch = pchs)#, lty = 1, lwd = 1)#, pt.cex = 2)
+
+
+
+## nodesets <- c("all", "lower", "sentinel")
