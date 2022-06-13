@@ -1,3 +1,5 @@
+>                                         # Print the results to the console (and connection)
+> print(summary(maxeig))
 Linear mixed-effects model fit by REML
   Data: rdf 
   Subset: ewi == "maxeig" 
@@ -37,6 +39,7 @@ Number of Groups:
                            50                          1100 
 nodeset %in% network %in% run 
                          3300 
+> print(summary(maxsd))
 Linear mixed-effects model fit by REML
   Data: rdf 
   Subset: ewi == "maxsd" 
@@ -76,6 +79,7 @@ Number of Groups:
                            50                          1100 
 nodeset %in% network %in% run 
                          3300 
+> print(summary(avgsd))
 Linear mixed-effects model fit by REML
   Data: rdf 
   Subset: ewi == "avgsd" 
@@ -115,6 +119,7 @@ Number of Groups:
                            50                          1100 
 nodeset %in% network %in% run 
                          3300 
+> print(summary(maxac))
 Linear mixed-effects model fit by REML
   Data: rdf 
   Subset: ewi == "maxac" 
@@ -154,6 +159,7 @@ Number of Groups:
                            50                          1100 
 nodeset %in% network %in% run 
                          3300 
+> print(summary(avgac))
 Linear mixed-effects model fit by REML
   Data: rdf 
   Subset: ewi == "avgac" 
@@ -193,3 +199,5 @@ Number of Groups:
                            50                          1100 
 nodeset %in% network %in% run 
                          3300 
+>                                         # and turn off the connection.
+> if(save_results) sink()

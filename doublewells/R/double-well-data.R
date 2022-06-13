@@ -48,3 +48,9 @@ empiricals <- c(
     "weaverbirds", "dolphins", "nestbox", "lizards", "bats", "elephantseals", "tortoises",
     "housefinches", "voles"
 )
+
+### For a consistent color palette
+dw_palette <- c(
+    "#80065d", "#f86c2a", "#09e2af", "#235d74", "#fed803",
+    "#5d8006", "#2abef8", "#f97959", "#743d23", "#c637fe"
+)

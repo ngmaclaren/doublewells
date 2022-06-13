@@ -10,7 +10,7 @@ export(
     "select_stressnode", "get_gcc", "CVk", "Kendall_correlations",
 
     ## Algorithm Support Functions
-    "choose_sentinels", "dw", "md",
+    "choose_sentinels", "choose_lowrank", "choose_antisentinels", "choose_altsentinels", "dw", "md",
 
     ## Counting Functions
     "upperstate", "lowerstate",
@@ -19,7 +19,10 @@ export(
     "simulation",
 
     ## Pre-defined, named motifs
-    "complete", "feedback", "feedforward", "fromthemiddleout", "linemotif", "tothemiddle"
+    "complete", "feedback", "feedforward", "fromthemiddleout", "linemotif", "tothemiddle",
+
+    ## For plotting
+    "dw_palette"
 )
 ## old exports:
 ##"windowed_sdmethod", "windowed_lagmethod", "windowed_acmethod", "Iadj", "sampled_MoranI"

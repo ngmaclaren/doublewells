@@ -6,8 +6,8 @@ library(igraph)
 library(doublewells)
 
                                         # Should the output be saved?
-save_results <- TRUE # FALSE
-save_plots <- TRUE # FALSE
+save_results <- FALSE # TRUE
+save_plots <- FALSE # TRUE
 
                                         # Which networks should be analyzed?
                                         # This is the same list as that in network-variation-sims.R
@@ -172,7 +172,8 @@ plotvals$set_ <- as.numeric(plotvals$set)
 ##     "olivedrab" # sentinel
 ## )
 five_ten <- c(
-    "#80065d", "#f86c2a", "#59f9d4", "#235d74", "#fed803", "#5d8006", "#2abef8", "#f97959", "#743d23", "#c637fe"
+    "#CC6677", "#332288", "#DDCC77", "#117733", "#88CCEE",
+    "#882255", "#44AA99", "#999933", "#AA4499", "#DDDDDD"
 )
 pal <- five_ten
 palette(pal)
@@ -180,33 +181,36 @@ palette(pal)
                                         # This block makes the ladder plot based on the calculated
                                         # values from get_values().
 
-plot_errorbars <- TRUE # FALSE
+plot_errorbars <- FALSE # TRUE
 ## yticklabels <- c("Maximum Autocorrelation", #"Average Standard Deviation",
 ##                  "Average Autocorrelation")
 yticklabels <- c("Dom. Eig.", "Max. SD", "Avg. SD", "Max. AC", "Avg. AC")
 ##legendlabels <- c("All Nodes", "Lower State Nodes", "Sentinel Nodes")
 legendlabels <- c("All", "Lower State", "Sentinel")
-ht <- 3.5
-wd <- 3.5*3
-if(plot_errorbars) pchs <- 3 else pchs <- 15:17
-pchcex <- 1
+ht <- 4
+wd <- 8
+##if(plot_errorbars) pchs <- 3 else pchs <- 1:3
+pchcex <- 2; pchs <- 1:3
 lwd <- 3
 if(save_plots) {
     pdf("./img/kendall-corr-figure.pdf", width = wd, height = ht)
 } else dev.new(width = wd, height = ht)
-par(mar = c(5, 5, 1, 1) + 0.1)
+par(mar = c(5, 8, 1, 1) + 0.1)
 ylims <- range(plotvals$signal_) + c(-.5, .5)
 xlims <- c(.7, 1)
 plot(NULL, ylim = ylims, xlim = xlims, #xlim = c(min(lowers)*.9, max(uppers)*1.1),
-     ylab = "", xlab = expression(tau), yaxt = "n", bty = "n")
-axis(side = 2, tick = FALSE, labels = yticklabels, at = max(plotvals$signal_):1, las = 1)
+     ylab = "", xlab = expression(tau), yaxt = "n", bty = "n",
+     cex.lab = 1.75, cex.axis = 1.75)
+axis(side = 2, tick = FALSE, labels = yticklabels, at = max(plotvals$signal_):1, las = 1,
+     cex.axis = 1.75)
 ##ypos <- 2 + c((1/3), 0, -(1/3))
 points(signal_ ~ est, data = plotvals, pch = pchs, lwd = lwd, col = plotvals$set_, cex = pchcex)
 if(plot_errorbars) {
     segments(x0 = plotvals$lower, x1 = plotvals$upper, y0 = plotvals$signal_,
              lty = 1, lwd = lwd, col = plotvals$set_)
 }
-legend("bottomright", legend = legendlabels, col = 1:3, bty = "n", pch = 3, pt.lwd = lwd)
+legend("bottomright", legend = legendlabels, col = 1:3, bty = "n", pch = 1:3, pt.lwd = lwd,
+       cex = 1.25)
 if(save_plots) dev.off()
 
 ##abline(h = 1.5, col = "gray", lwd = .5, lty = 1)

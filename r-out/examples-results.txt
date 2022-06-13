@@ -1,0 +1,469 @@
+[1] "pref_attach"
+                 [,1]
+maxeig_all      0.788
+maxsd_all       0.849
+avgsd_all       0.780
+maxac_all       0.749
+avgac_all       0.739
+maxeig_lower    0.793
+maxsd_lower     0.849
+avgsd_lower     0.862
+maxac_lower     0.749
+avgac_lower     0.827
+maxeig_sentinel 0.825
+maxsd_sentinel  0.851
+avgsd_sentinel  0.879
+maxac_sentinel  0.768
+avgac_sentinel  0.822
+[1] "dolphins"
+                 [,1]
+maxeig_all      0.827
+maxsd_all       0.838
+avgsd_all       0.812
+maxac_all       0.755
+avgac_all       0.709
+maxeig_lower    0.827
+maxsd_lower     0.838
+avgsd_lower     0.905
+maxac_lower     0.755
+avgac_lower     0.843
+maxeig_sentinel 0.827
+maxsd_sentinel  0.827
+avgsd_sentinel  0.885
+maxac_sentinel  0.777
+avgac_sentinel  0.812
+> ## old code for testing
+> ## cor(df_list[[1]]$Ds[df_list[[1]]$n_lowerstate == 100], df_list[[1]]$avgac_all[df_list[[1]]$n_lowerstate == 100], method = "kendall")
+> ## subset(df_list[[1]], Ds <.3, select = c(n_lowerstate, Ds, avgac_all))
+> ## Code by Neil MacLaren 2/25/2022
+> 
+> library(igraph)
+> library(doublewells)
+>                                         # To save the figure outside of this session
+> save_plots <- TRUE # FALSE
+> imgfile <- "./img/examples-multistage-transition-alts.pdf"
+>                                         # Run new sims with this seed or load a previous version from
+>                                         # disk?
+> run_sims <- TRUE # FALSE
+> set.seed(123)
+> outfile <- "./data/examples-results-alts.rda"
+>                                         # Save results for tables?
+> save_results <- TRUE # FALSE
+> r_outfile <- "./r-out/examples-results-alts.txt"
+>                                         # Networks to use for examples
+> choices <- c("pref_attach", "dolphins")
+> if(run_sims) {
++                                         # load the appropriate networks, which are part of the
++                                         # doublewells package
++     data(list = choices) 
++                                         # Store results for both networks
++     df_list <- l .... [TRUNCATED] 
+[1] 1
+> r = c(1, 4, 7)
+_messageNEW: r\> D.init = 0.01
+_messageNEW: D.init\> s = 0.05
+_messageNEW: s\> nsamples = 250
+_messageNEW: nsamples\> sample_spacing = .1
+_messageNEW: sample_spacing\> lag = 0.1
+_messageNEW: lag\> stepsize = 5e-3
+_messageNEW: stepsize\> n_sentinels = 5
+_messageNEW: n_sentinels\> node_cutoff = .1*vcount(g)
+_messageNEW: node_cutoff\> state_cutoff = NULL
+_messageNEW: state_cutoff\> TU = 75
+_messageNEW: TU\> dt = 0.01
+_messageNEW: dt\> check_equil = FALSE
+_messageNEW: check_equil\> state_check = TU - 25
+_messageNEW: state_check\> check_alts = FALSE
+_messageNEW: check_alts\> if(is.null(state_cutoff)) state_cutoff <- optimize(dw, c(r[1], r[2]), r = r)$minimum
+_messageNEW: state_cutoff\> if(check_alts) {
++         upper_state_cutoff <- optimize(dw, c(r[2], r[3]), r = r, maximum = TRUE)$maximum
++     }
+> nnodes <- vcount(g)
+_messageNEW: nnodes\> A <- as_adj(g, type = "both", sparse = FALSE)
+_messageNEW: A\> D <- D.init
+_messageNEW: D\> u <- rep(0, nnodes)
+_messageNEW: u\> T <- TU/dt
+_messageNEW: T\> state_check <- state_check/dt
+_messageNEW: state_check\> s <- s*sqrt(dt)
+_messageNEW: s\> lag <- lag/dt
+_messageNEW: lag\> sample_spacing <- sample_spacing/dt
+_messageNEW: sample_spacing\> samples <- seq(from = T, by = -sample_spacing, length.out = nsamples)
+_messageNEW: samples\> initialx <- rep(1, nnodes)
+_messageNEW: initialx\> in_lowerstate <- V(g)
+_messageNEW: in_lowerstate\> n_lowerstate <- numeric()
+_messageNEW: n_lowerstate\> Ds <- numeric()
+_messageNEW: Ds\> maxeig <- list(all = numeric(), lower = numeric(), sentinel = numeric())
+_messageNEW: maxeig\> maxsd <- list(all = numeric(), lower = numeric(), sentinel = numeric())
+_messageNEW: maxsd\> avgsd <- list(all = numeric(), lower = numeric(), sentinel = numeric())
+_messageNEW: avgsd\> maxac <- list(all = numeric(), lower = numeric(), sentinel = numeric())
+_messageNEW: maxac\> avgac <- list(all = numeric(), lower = numeric(), sentinel = numeric())
+_messageNEW: avgac\> sentinel_history <- list()
+_messageNEW: sentinel_history\> if(check_equil) equils <- list()
+> if(check_alts) {
++         maxeig$upper <- numeric()
++         maxeig$lower_bottom <- numeric()
++         maxeig$lowrank <- numeric()
++         maxeig$antisentinel <- numeric()
++         maxeig$altsentinel <- numeric()
++         maxsd$upper <- numeric()
++         maxsd$lower_bottom <- numeric()
++  .... [TRUNCATED] 
+> i <- 1
+_messageNEW: i\> x <- initialx
+_messageNEW: x\> X <- matrix(0, nrow = T, ncol = nnodes)
+_messageNEW: X\> for(t in 1:T) {
++                                         # Store the present state
++             X[t, ] <- x
++                                         # and calculate the next state.
++             x <- double_well_coupled(x, r[1], r[2], r[3], D, A, dt, noise(nnodes, s), u)
++         }
+_messageNEW: t, x, X\> if(check_equil) {
++             at_equil <- X[(TU-25)/dt, ]
++             at_end <- X[TU/dt, ]
++             equils[[i]] <- data.frame(at_equil, at_end)
++         }
+> in_lowerstate <- V(g)[which(lowerstate(X[state_check, ], cutoff = state_cutoff) == 1)]
+_messageNEW: in_lowerstate\> if(length(in_lowerstate) <= node_cutoff) break
+> if(length(in_lowerstate) < n_sentinels) break
+> sentinels <- choose_sentinels(g, X, samples, n = n_sentinels,
++                                       cutoff = state_cutoff, state_check = state_check)
+_messageNEW: sentinels\> if(check_alts) {
++             in_upperstate <- V(g)[
++                 which(upperstate(X[state_check, ], cutoff = upper_state_cutoff) == 1)
++             ]
++             lower_bottom <- in_lowerstate[
++                 which(x[in_lowerstate] < quantile(x[in_lowerstate], probs = .5))
++            .... [TRUNCATED] 
+> maxeig$all[i] <- sampled_eigenmethod(X, samples = samples, nodes = V(g))
+_messageNEW: maxeig\> maxeig$lower[i] <- sampled_eigenmethod(X, samples = samples, nodes = in_lowerstate)
+_messageNEW: maxeig\> maxeig$sentinel[i] <- sampled_eigenmethod(X, samples = samples, nodes = sentinels)
+_messageNEW: maxeig\> if(check_alts) {
++             if(length(in_upperstate) > 0) {
++                 maxeig$upper[i] <- sampled_eigenmethod(X, samples = samples, nodes = in_upperstate)
++                 maxeig$lowrank[i] <- sampled_eigenmethod(X, samples = samples, nodes = lowrank)
++                 maxeig$altsentine .... [TRUNCATED] 
+> sds <- list()
+>         sds$all <- apply(X[samples, ], 2, sd)
+>         sds$lower <- apply(X[samples, in_lowerstate], 2, sd)
+>         sds$sentinel <- apply(X[samples, sentinels], 2, sd)
+>         if(check_alts) {
++             if(length(in_upperstate) > 0) {
++                 sds$upper <- apply(X[samples, in_upperstate], 2, sd)
++             } else sds$upper <- rep(NA, ncol(X))
++             sds$lower_bottom <- apply(X[samples, lower_bottom], 2, sd)
++             sds$lowrank <- app .... [TRUNCATED] 
+>         for(j in 1:length(sds)) maxsd[[j]][i] <- max(sds[[j]])
+>         for(j in 1:length(sds)) avgsd[[j]][i] <- mean(sds[[j]])
+_messageNEW: avgsd, j, maxsd, sds\> acs <- list()
+>         acs$all <- sampled_acmethod(X, samples, lag = lag)
+>         acs$lower <- sampled_acmethod(X[, in_lowerstate], samples, lag = lag)
+>         acs$sentinel <- sampled_acmethod(X[, sentinels], samples, lag = lag)
+>         if(check_alts) {
++             if(length(in_upperstate) > 0) {
++                 acs$upper <- sampled_acmethod(X[, in_upperstate], samples, lag = lag)
++             } else acs$upper <- rep(NA, ncol(X))
++             acs$lower_bottom <- sampled_acmethod(X[, lower_bottom], samples, lag = lag .... [TRUNCATED] 
+>         for(j in 1:length(acs)) maxac[[j]][i] <- max(acs[[j]])
+>         for(j in 1:length(acs)) avgac[[j]][i] <- mean(acs[[j]])
+_messageNEW: acs, avgac, maxac\> Ds[i] <- D
+>         n_lowerstate[i] <- length(in_lowerstate)
+>         sentinel_history[[i]] <- sentinels
+>         if(check_alts) {
++             antisentinel_history[[i]] <- antisentinels
++             altsentinel_history[[i]] <- altsentinels
++         }
+_messageNEW: Ds, n_lowerstate, sentinel_history\> D <- D + stepsize
+_messageNEW: D\> i <- i + 1
+_messageNEW: i\> maxeig <- do.call(cbind, maxeig)
+_messageNEW: maxeig\> colnames(maxeig) <- paste("maxeig", colnames(maxeig), sep = "_")
+_messageNEW: maxeig\> maxsd <- do.call(cbind, maxsd)
+_messageNEW: maxsd\> colnames(maxsd) <- paste("maxsd", colnames(maxsd), sep = "_")
+_messageNEW: maxsd\> avgsd <- do.call(cbind, avgsd)
+_messageNEW: avgsd\> colnames(avgsd) <- paste("avgsd", colnames(avgsd), sep = "_")
+_messageNEW: avgsd\> maxac <- do.call(cbind, maxac)
+_messageNEW: maxac\> colnames(maxac) <- paste("maxac", colnames(maxac), sep = "_")
+_messageNEW: maxac\> avgac <- do.call(cbind, avgac)
+_messageNEW: avgac\> colnames(avgac) <- paste("avgac", colnames(avgac), sep = "_")
+_messageNEW: avgac\> sentinel_history <- do.call(rbind, sentinel_history)
+_messageNEW: sentinel_history\> if(check_alts) {
++         antisentinel_history <- do.call(rbind, antisentinel_history)
++         altsentinel_history <- do.call(rbind, altsentinel_history)
++     }
+> df <- data.frame(
++         n_lowerstate = n_lowerstate, # [-length(n_lowerstate)]
++         Ds = Ds
++     )
+>     df <- cbind(df, maxeig, maxsd, avgsd, maxac, avgac)
+_messageNEW: df\> if(!check_alts) {
++         antisentinel_history <- NULL
++         altsentinel_history <- NULL
++     }
+_messageNEW: altsentinel_history, antisentinel_history\> if(check_equil) {
++         return(list(
++             results = df, sentinels = sentinel_history, equil = equils,
++             antisentinels = antisentinel_history))
++     } else {
++         return(list(results = df, sentinels = sentinel_history, antisentinels = antisentinel_history))
++     }
+$results
+  n_lowerstate   Ds   maxeig_all maxeig_lower maxeig_sentinel   maxsd_all
+1          100 0.01 0.0001952327 0.0001952327    9.183216e-05 0.009902031
+  maxsd_lower maxsd_sentinel  avgsd_all avgsd_lower avgsd_sentinel maxac_all
+1 0.009902031    0.009333252 0.00867777  0.00867777    0.008788937   0.27294
+  maxac_lower maxac_sentinel avgac_all avgac_lower avgac_sentinel
+1     0.27294       0.241733 0.1349112   0.1349112      0.1932626
+
+$sentinels
+     [,1] [,2] [,3] [,4] [,5]
+[1,]   13    5    3    1   10
+
+$antisentinels
+NULL
+
+[1] FALSE
+> if(is.null(state_cutoff)) state_cutoff <- optimize(dw, c(r[1], r[2]), r = r)$minimum
+>                                         # If checking alternatives, need the local maximum as well
+>     if(check_alts) {
++         upper_state_cutoff <- optimize(dw, c(r[2], r[3]), r = r, maximum = TRUE)$maximum
++     }
+>                                         # Record the total number of nodes in g for later use.
+>     nnodes <- vcount(g)
+>                                         # And make the adjacency matrix.
+>     A <- as_adj(g, type = "both", sparse = FALSE)
+>     ## Node Systems
+>                                         # Set D
+>     D <- D.init
+>                                         # Stress vector, not used in this analysis so set to zero
+>     u <- rep(0, nnodes) 
+>     ## Sim Params
+>                                         # Rescale time-related variables. This is done so that the
+>                                         # user can think in terms of time units, but the simulation
+>                                         # can calculate with the results of .... [TRUNCATED] 
+>     state_check <- state_check/dt
+>                                         # Rescaling needs to be done for the noise parameter as well.
+>     s <- s*sqrt(dt)
+>     ## Early Warnings Params
+>     lag <- lag/dt
+>     ## sample_spacing <- 0.1
+>     sample_spacing <- sample_spacing/dt
+>                                         # It is easiest to select samples once by "counting
+>                                         # backwards" from the end of the simulation.
+>     samples <- seq(from = T, by = -sample_spacing, length.out = nsamples)
+>                                         # All x_i are initially set to 1 with no noise
+>     initialx <- rep(1, nnodes)
+>                                         # And therefore all nodes are initially in the lower state.
+>     in_lowerstate <- V(g)
+_messageNEW: D, in_lowerstate, lag, s, sample_spacing, samples, state_check\> n_lowerstate <- numeric()
+_messageNEW: n_lowerstate\> Ds <- numeric()
+_messageNEW: Ds\> maxeig <- list(all = numeric(), lower = numeric(), sentinel = numeric())
+_messageNEW: maxeig\> maxsd <- list(all = numeric(), lower = numeric(), sentinel = numeric())
+_messageNEW: maxsd\> avgsd <- list(all = numeric(), lower = numeric(), sentinel = numeric())
+_messageNEW: avgsd\> maxac <- list(all = numeric(), lower = numeric(), sentinel = numeric())
+_messageNEW: maxac\> avgac <- list(all = numeric(), lower = numeric(), sentinel = numeric())
+_messageNEW: avgac\> sentinel_history <- list()
+_messageNEW: sentinel_history\> if(check_equil) equils <- list()
+> if(check_alts) {
++         maxeig$upper <- numeric()
++         maxeig$lower_bottom <- numeric()
++         maxeig$lowrank <- numeric()
++         maxeig$antisentinel <- numeric()
++         maxeig$altsentinel <- numeric()
++         maxsd$upper <- numeric()
++         maxsd$lower_bottom <- numeric()
++  .... [TRUNCATED] 
+> x <- initialx
+>                                         # and start with a matrix of zeros to store integration
+>                                         # results.
+>         X <- matrix(0, nrow = T, ncol = nnodes)
+>                                         # Main integration loop
+>         for(t in 1:T) {
++                                         # Store the present state
++             X[t, ] <- x
++                                         # and calculate the next state.
++             x <- double_well_coupled(x .... [TRUNCATED] 
+>                                         # If checking equilibrium state, check states of all nodes at
+>                                         # the TU each /should/ be at equilibrium to start sampling
+>                                         # (TU - 25) and at the end. In very few cases, some n .... [TRUNCATED] 
+_messageNEW: x, X\> in_lowerstate <- V(g)[which(lowerstate(X[state_check, ], cutoff = state_cutoff) == 1)]
+[1] 5e+05
+> sample_spacing = .1
+_messageNEW: sample_spacing\> lag = 0.1
+_messageNEW: lag\> TU = 75
+> dt = 0.01
+> state_check = TU - 25
+_messageNEW: state_check\> if(is.null(state_cutoff)) state_cutoff <- optimize(dw, c(r[1], r[2]), r = r)$minimum
+>                                         # If checking alternatives, need the local maximum as well
+>     if(check_alts) {
++         upper_state_cutoff <- optimize(dw, c(r[2], r[3]), r = r, maximum = TRUE)$maximum
++     }
+>                                         # Record the total number of nodes in g for later use.
+>     nnodes <- vcount(g)
+>                                         # And make the adjacency matrix.
+>     A <- as_adj(g, type = "both", sparse = FALSE)
+>     ## Node Systems
+>                                         # Set D
+>     D <- D.init
+>                                         # Stress vector, not used in this analysis so set to zero
+>     u <- rep(0, nnodes) 
+>     ## Sim Params
+>                                         # Rescale time-related variables. This is done so that the
+>                                         # user can think in terms of time units, but the simulation
+>                                         # can calculate with the results of .... [TRUNCATED] 
+>     state_check <- state_check/dt
+>                                         # Rescaling needs to be done for the noise parameter as well.
+>     s <- s*sqrt(dt)
+>     ## Early Warnings Params
+>     lag <- lag/dt
+>     ## sample_spacing <- 0.1
+>     sample_spacing <- sample_spacing/dt
+>                                         # It is easiest to select samples once by "counting
+>                                         # backwards" from the end of the simulation.
+>     samples <- seq(from = T, by = -sample_spacing, length.out = nsamples)
+>                                         # All x_i are initially set to 1 with no noise
+>     initialx <- rep(1, nnodes)
+>                                         # And therefore all nodes are initially in the lower state.
+>     in_lowerstate <- V(g)
+>     ## Storage Vectors
+>     n_lowerstate <- numeric()
+>     Ds <- numeric()
+>     maxeig <- list(all = numeric(), lower = numeric(), sentinel = numeric())
+>     maxsd <- list(all = numeric(), lower = numeric(), sentinel = numeric())
+>     avgsd <- list(all = numeric(), lower = numeric(), sentinel = numeric())
+>     maxac <- list(all = numeric(), lower = numeric(), sentinel = numeric())
+>     avgac <- list(all = numeric(), lower = numeric(), sentinel = numeric())
+>     sentinel_history <- list()
+>     if(check_equil) equils <- list()
+>                                         # If checking alternatives each storage vector needs two
+>                                         # additional positions
+>     if(check_alts) {
++         maxeig$upper <- numeric()
++         maxeig$lower_bottom <- numeric()
++         maxeig$lowrank <- numeri .... [TRUNCATED] 
+>     ## Main Simulation Loop
+>     i <- 1
+_messageNEW: i, in_lowerstate, lag, s, sample_spacing, samples, state_check\[1] 5000
+> x <- initialx
+_messageNEW: x\> X <- matrix(0, nrow = T, ncol = nnodes)
+_messageNEW: X\> for(t in 1:T) {
++                                         # Store the present state
++             X[t, ] <- x
++                                         # and calculate the next state.
++             x <- double_well_coupled(x, r[1], r[2], r[3], D, A, dt, noise(nnodes, s), u)
++         }
+_messageNEW: x, X\> if(check_equil) {
++             at_equil <- X[(TU-25)/dt, ]
++             at_end <- X[TU/dt, ]
++             equils[[i]] <- data.frame(at_equil, at_end)
++         }
+> in_lowerstate <- V(g)[which(lowerstate(X[state_check, ], cutoff = state_cutoff) == 1)]
+>         if(length(in_lowerstate) <= node_cutoff) break
+>         if(length(in_lowerstate) < n_sentinels) break
+_messageNEW: in_lowerstate\> sentinels <- choose_sentinels(g, X, samples, n = n_sentinels,
++                                       cutoff = state_cutoff, state_check = state_check)
+_messageNEW: sentinels\> if(check_alts) {
++             in_upperstate <- V(g)[
++                 which(upperstate(X[state_check, ], cutoff = upper_state_cutoff) == 1)
++             ]
++             lower_bottom <- in_lowerstate[
++                 which(x[in_lowerstate] < quantile(x[in_lowerstate], probs = .5))
++            .... [TRUNCATED] 
+[1] TRUE
+> if(check_alts) {
++         upper_state_cutoff <- optimize(dw, c(r[2], r[3]), r = r, maximum = TRUE)$maximum
++     }
+[1] TRUE
+> upper_state_cutoff <- optimize(dw, c(r[2], r[3]), r = r, maximum = TRUE)$maximum
+_messageNEW: upper_state_cutoff\[1] 5.732071
+> maxeig$upper <- numeric()
+_messageNEW: maxeig\> maxeig$lower_bottom <- numeric()
+_messageNEW: maxeig\> maxeig$lowrank <- numeric()
+_messageNEW: maxeig\> maxeig$antisentinel <- numeric()
+_messageNEW: maxeig\> maxeig$altsentinel <- numeric()
+_messageNEW: maxeig\> maxsd$upper <- numeric()
+_messageNEW: maxsd\> maxsd$lower_bottom <- numeric()
+_messageNEW: maxsd\> maxsd$lowrank <- numeric()
+_messageNEW: maxsd\> maxsd$antisentinel <- numeric()
+_messageNEW: maxsd\> maxsd$altsentinel <- numeric()
+_messageNEW: maxsd\> avgsd$upper <- numeric()
+_messageNEW: avgsd\> avgsd$lower_bottom <- numeric()
+_messageNEW: avgsd\> avgsd$lowrank <- numeric()
+_messageNEW: avgsd\> avgsd$antisentinel <- numeric()
+_messageNEW: avgsd\> avgsd$altsentinel <- numeric()
+_messageNEW: avgsd\> maxac$upper <- numeric()
+_messageNEW: maxac\> maxac$lower_bottom <- numeric()
+_messageNEW: maxac\> maxac$lowrank <- numeric()
+_messageNEW: maxac\> maxac$antisentinel <- numeric()
+_messageNEW: maxac\> maxac$altsentinel <- numeric()
+_messageNEW: maxac\> avgac$upper <- numeric()
+_messageNEW: avgac\> avgac$lower_bottom <- numeric()
+_messageNEW: avgac\> avgac$lowrank <- numeric()
+_messageNEW: avgac\> avgac$antisentinel <- numeric()
+_messageNEW: avgac\> avgac$altsentinel <- numeric()
+_messageNEW: avgac\> antisentinel_history <- list()
+_messageNEW: antisentinel_history\> altsentinel_history <- list()
+_messageNEW: altsentinel_history\> x <- initialx
+_messageNEW: x\> X <- matrix(0, nrow = T, ncol = nnodes)
+_messageNEW: X\> for(t in 1:T) {
++                                         # Store the present state
++             X[t, ] <- x
++                                         # and calculate the next state.
++             x <- double_well_coupled(x, r[1], r[2], r[3], D, A, dt, noise(nnodes, s), u)
++         }
+_messageNEW: x, X\> in_lowerstate <- V(g)[which(lowerstate(X[state_check, ], cutoff = state_cutoff) == 1)]
+_messageNEW: in_lowerstate\> sentinels <- choose_sentinels(g, X, samples, n = n_sentinels,
++                                       cutoff = state_cutoff, state_check = state_check)
+_messageNEW: sentinels\> in_upperstate <- V(g)[
++                 which(upperstate(X[state_check, ], cutoff = upper_state_cutoff) == 1)
++             ]
+_messageNEW: in_upperstate\> lower_bottom <- in_lowerstate[
++                 which(x[in_lowerstate] < quantile(x[in_lowerstate], probs = .5))
++             ]
+_messageNEW: lower_bottom\> lowrank <- choose_lowrank(g, X, samples, cutoff = state_cutoff, state_check = state_check)
+_messageNEW: lowrank\> antisentinels <- choose_antisentinels(g, sentinels, n_sentinels)
+_messageNEW: antisentinels\> altsentinels <- choose_altsentinels(X, samples,
++                                                 cutoff = state_cutoff, state_check = state_check)
+_messageNEW: altsentinels\[1] NA NA NA NA NA
++ 5/100 vertices, from 4fbdd5c:
+[1]  84   8 100  65  51
++ 0/100 vertices, from 4fbdd5c:
++ 50/100 vertices, from 4fbdd5c:
+ [1]   9  11  14  15  18  19  23  25  26  30  31  33  36  37  39  41  42  45  47
+[20]  49  52  53  54  55  58  59  61  62  63  65  70  71  72  73  74  78  79  80
+[39]  83  84  88  89  90  91  92  93  94  95  97 100
+> maxeig$all[i] <- sampled_eigenmethod(X, samples = samples, nodes = V(g))
+_messageNEW: maxeig\> maxeig$lower[i] <- sampled_eigenmethod(X, samples = samples, nodes = in_lowerstate)
+_messageNEW: maxeig\> maxeig$sentinel[i] <- sampled_eigenmethod(X, samples = samples, nodes = sentinels)
+_messageNEW: maxeig\> length(in_upperstate) > 0
+[1] FALSE
+> maxeig$upper[i] <- NA
+_messageNEW: maxeig\> maxeig$lowrank[i] <- NA
+_messageNEW: maxeig\> maxeig$altsentinel[i] <- NA
+_messageNEW: maxeig\> maxeig$lower_bottom[i] <- sampled_eigenmethod(X, samples = samples, nodes = lower_bottom)
+_messageNEW: maxeig\> maxeig$antisentinel[i] <- sampled_eigenmethod(X, samples = samples, nodes = antisentinels)
+_messageNEW: maxeig\> sds <- list()
+_messageNEW: sds\> sds$all <- apply(X[samples, ], 2, sd)
+_messageNEW: sds\> sds$lower <- apply(X[samples, in_lowerstate], 2, sd)
+_messageNEW: sds\> sds$sentinel <- apply(X[samples, sentinels], 2, sd)
+_messageNEW: sds\> sds$upper <- rep(NA, ncol(X))
+_messageNEW: sds\> sds$lower_bottom <- apply(X[samples, lower_bottom], 2, sd)
+_messageNEW: sds\> sds$lowrank <- apply(X[samples, lowrank], 2, sd)
+_messageNEW: sds\> sds$antisentinel <- apply(X[samples, antisentinels], 2, sd)
+_messageNEW: sds\> sds$altsentinel <- apply(X[samples, altsentinels], 2, sd)
+_messageNEW: sds\> for(j in 1:length(sds)) maxsd[[j]][i] <- max(sds[[j]])
+_messageNEW: j, maxsd\> for(j in 1:length(sds)) avgsd[[j]][i] <- mean(sds[[j]])
+_messageNEW: avgsd\> acs <- list()
+_messageNEW: acs\> acs$all <- sampled_acmethod(X, samples, lag = lag)
+_messageNEW: acs\> acs$lower <- sampled_acmethod(X[, in_lowerstate], samples, lag = lag)
+_messageNEW: acs\> acs$sentinel <- sampled_acmethod(X[, sentinels], samples, lag = lag)
+_messageNEW: acs\> acs$upper <- rep(NA, ncol(X))
+_messageNEW: acs\> acs$lower_bottom <- sampled_acmethod(X[, lower_bottom], samples, lag = lag)
+_messageNEW: acs\> acs$lowrank <- sampled_acmethod(X[, lowrank], samples, lag = lag)
+_messageNEW: acs\> acs$antisentinel <- sampled_acmethod(X[, antisentinels], samples, lag = lag)
+_messageNEW: acs\> acs$altsentinel <- sampled_acmethod(X[, altsentinels], samples, lag = lag)
+[1] NA NA NA NA NA
++ 50/100 vertices, from 4fbdd5c:
+ [1]   9  11  14  15  18  19  23  25  26  30  31  33  35  36  37  39  41  42  45
+[20]  47  49  52  53  54  55  58  59  60  61  62  65  70  71  72  73  74  78  79
+[39]  80  83  84  88  89  91  92  93  94  95  97 100
+> sampled_eigenmethod(X, samples = samples, nodes = lowrank)
+[1] 1.514857e-08

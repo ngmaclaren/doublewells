@@ -3,7 +3,7 @@
 library(igraph)
 library(doublewells)
 
-save_plots <- TRUE # FALSE
+save_plots <- FALSE # TRUE
 use_noise <- FALSE # TRUE
 run_simulation <- FALSE # TRUE
 x_is_kdiff <- FALSE # TRUE
@@ -150,15 +150,24 @@ df$xval <- ymin/df$k_min - ymax/df$k_max
 
 
                                         # alternate, y2/kmin - y1/kmax
-ht <- 6; wd <- 6
+ht <- 6; wd <- 6.5
 if(save_plots) {
     pdf("./img/compare-kminmax-with-D.pdf", height = ht, width = wd)
 } else dev.new(height = ht, width = wd)
-par(mar = c(5, 4, 2, 2) + 0.1)
+par(mar = c(5, 6, 2, 2) + 0.1)
 plot(rangeD ~ xval, data = df, pch = 1, col = "black", cex = 2, lwd = 1.75,
-     cex.lab = 1.25, cex.axis = 1.25,
+     ##cex.lab = 1.25, cex.axis = 1.25,
+     axes = FALSE,
      xlim = c(0, 2.25), ylim = range(df$rangeD),
-     xlab = expression(italic(tilde(y))^(2)/italic(k)[min] - italic(tilde(y))^(1)/italic(k)[max]),
-     ylab = "Magnitude of range of D")
+     xlab = "", ylab = ""
+     ##xlab = expression(italic(tilde(y))^(2)/italic(k)[min] - italic(tilde(y))^(1)/italic(k)[max]),
+     ##ylab = "Magnitude of range of D"
+     )
+box()
+axis(1, cex.axis = 1.75, las = 1)
+axis(2, cex.axis = 1.75, las = 1)
+title(xlab = expression(italic(tilde(y))^(2)/italic(k)[min] - italic(tilde(y))^(1)/italic(k)[max]),
+      cex.lab = 1.75, line = 3.5)
+title(ylab = "Magnitude of range of D", line = 4.5, cex.lab = 1.75)
 mtext("(b)", line = -1.3, adj = .01, font = 1, cex = 1.5)
 if(save_plots) dev.off()

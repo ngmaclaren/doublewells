@@ -4,7 +4,7 @@
 library(igraph)
 library(doublewells)
 
-save_plots <- TRUE # FALSE
+save_plots <- FALSE # TRUE
 use_noise <- FALSE # TRUE
 run_simulation <- FALSE # TRUE
 x_is_kdiff <- TRUE # FALSE
@@ -124,17 +124,25 @@ df$kdiff_raw <- sapply(rownames(df), function(x) {
 })
 
 if(x_is_kdiff) {
-    ht <- 6; wd <- 6
+    ht <- 6; wd <- 6.5
     if(save_plots) {
         pdf("./img/compare-kdiff-with-c.pdf", height = ht, width = wd)
     } else dev.new(height = ht, width = wd)
-    par(mar = c(5, 4, 2, 2) + 0.1)
+    par(mar = c(5, 6, 2, 2) + 0.1)
     plot(range_u ~ kdiff_raw, data = df, pch = 1, cex = 2, lwd = 1.75, col = "black",
-         cex.lab = 1.25, cex.axis = 1.25,
+         axes = FALSE,
+         ##cex.lab = 1.75, cex.axis = 1.75, las = 1,
          xlim = c(0, 100), ylim = range(df$range_u),
          ##cex = (df$N/100)*2,
-         xlab = expression(italic(k)[max] - italic(k)[min]),#expression(k[diff]),
-         ylab = "Magnitude of range of u")
+         xlab = "",#expression(italic(k)[max] - italic(k)[min]),#expression(k[diff]),
+         ylab = ""
+         ##ylab = "Magnitude of range of u"
+         )
+    box()
+    axis(1, cex.axis = 1.75, las = 1)
+    axis(2, cex.axis = 1.75, las = 1)
+    title(ylab = "Magnitude of range of u", line = 4.5, cex.lab = 1.75)
+    title(xlab = expression(italic(k)[max] - italic(k)[min]), cex.lab = 1.75, line = 3.5)
     mtext("(a)", line = -1.3, adj = .01, font = 1, cex = 1.5)
     if(save_plots) dev.off()
 } else{
