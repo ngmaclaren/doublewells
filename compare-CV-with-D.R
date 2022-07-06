@@ -1,4 +1,5 @@
 ## Code by Neil MacLaren, 2/24/2022
+## for preprint at https://arxiv.org/abs/2205.11592v1
 
 library(igraph)
 library(doublewells)
@@ -111,7 +112,6 @@ dat <- lapply(parts, function(x) {
 })
 
 df <- as.data.frame(do.call(rbind, dat))
-##empirical_rows <- c("dolphins", "jpr", "NNS", "pira", "sn_auth")
 df$N <- sapply(rownames(df), function(x) vcount(get(x)))
 
                                         # Retrieve local min and max for doublewell function
@@ -124,31 +124,6 @@ df$k_max <- sapply(rownames(df), function(x) max(degree(get(x))))
 
 df$xval <- ymin/df$k_min - ymax/df$k_max
 
-## if(x_is_kdiff) {
-##     ht <- 7; wd <- 7
-##     if(save_plots) {
-##         pdf("./img/compare-kdiff-with-D.pdf", height = ht, width = wd)
-##     } else dev.new(height = ht, width = wd)
-##     plot(rangeD ~ kdiff, data = df, pch = 1, lwd = 2, col = "black",
-##          cex = (df$N/100)*2,
-##          xlab = expression(k[diff]), ylab = "Magnitude of Range of D Over Which Transitions Occur")
-##     if(save_plots) dev.off()
-## } else{
-##     ht <- 7
-##     wd <- 7
-##     if(save_plots) {
-##         pdf("./img/compare-CV-with-D.pdf", height = ht, width = wd)
-##     } else dev.new(height = ht, width = wd)
-##     ##par(mfrow = c(1, 2))
-##     ##plot(nstages ~ CV, data = df, pch = 19, col = "firebrick",
-##     ##    xlab = "CV of Degree Distribution", ylab = "Number of Stages in Double-Wells Transition")
-##     plot(rangeD ~ CV, data = df, pch = 1, lwd = 2, col = "black",
-##          cex = (df$N/100)*2,
-##          xlab = "CV of Degree Distribution", ylab = "Magnitude of Range of D Over Which Transitions Occur")
-##     if(save_plots) dev.off()
-## }
-
-
                                         # alternate, y2/kmin - y1/kmax
 ht <- 6; wd <- 6.5
 if(save_plots) {
@@ -156,12 +131,9 @@ if(save_plots) {
 } else dev.new(height = ht, width = wd)
 par(mar = c(5, 6, 2, 2) + 0.1)
 plot(rangeD ~ xval, data = df, pch = 1, col = "black", cex = 2, lwd = 1.75,
-     ##cex.lab = 1.25, cex.axis = 1.25,
      axes = FALSE,
      xlim = c(0, 2.25), ylim = range(df$rangeD),
      xlab = "", ylab = ""
-     ##xlab = expression(italic(tilde(y))^(2)/italic(k)[min] - italic(tilde(y))^(1)/italic(k)[max]),
-     ##ylab = "Magnitude of range of D"
      )
 box()
 axis(1, cex.axis = 1.75, las = 1)

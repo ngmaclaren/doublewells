@@ -6,33 +6,17 @@ library(doublewells)
 ### This file produces the various examples figures
 
 ## options
-save_plots <- TRUE # FALSE
+save_plots <- FALSE # TRUE
 
-## what I'll use for all
 pal <- c(
-    ## Mine, starting with random colors
-    ## "#80065d", "#f86c2a", "#09e2af", "#235d74", "#fed803", "#938272",
-    ## "#5d8006", "#2abef8", "#f97959", "#743d23", "#c637fe", "#727493"
-    ## http://tsitsul.in/blog/coloropt/
-    ## "#ebac23", "#b80058", "#008cf9", "#006e00", "#00bbad", "#d163e6",
-    ## "#b24502", "#ff9287", "#5954d6", "#00c6f8", "#878500", "#00a76c",
-    ## "#bdbdbd"
-    ## https://www.tableau.com/about/blog/2016/7/colors-upgrade-tableau-10-56782
-    ## "#4e79a7", "#f28e2b", "#e15759", "#76b7b2", "#59a14e",
-    ## "#edc949", "#b07aa2", "#ff9da7", "#9c755f", "#bab0ac"
     ## https://personal.sron.nl/~pault/#sec:qualitative, the muted qualitative colour scheme
     "#CC6677", "#332288", "#DDCC77", "#117733", "#88CCEE",
-    "#882255", "#44AA99", "#999933", "#AA4499", "#DDDDDD"
+    "#882255", "#44AA99", "#999933", "#AA4499", "#AAAAAA"#"#DDDDDD"
     
 )
 palette(pal)
 load("./data/examples-lower.rda")
 load("./data/examples-upper.rda")
-
-### Node sets are peculiar to a particular plot
-### as are signals, potentially
-
-
 
 ### Figure 1. use examples_lower
 ### x = D, y1 = prop lower state, y2 = avg ac
@@ -40,7 +24,6 @@ nodesets <- c("all", "lower", "sentinel")
 signals <- c("avgac")
 columns <- paste(signals, nodesets, sep = "_")
 d_imgfile <- "./img/examples-multistage-transition.pdf"
-## need a standard for these...
 wd <- 9
 ht <- 8
 colors <- 1:length(nodesets)
@@ -55,7 +38,6 @@ par(mfrow = c(2, 1), mar = c(3.5, 4, 1, 4)+.4, xpd = TRUE)
 for(i in 1:length(examples_lower)) {
     df <- examples_lower[[i]]
     df$p_lowerstate <- round((df$n_lowerstate/max(df$n_lowerstate))*100)
-    ##columns <- colnames(df)[grep(signals, colnames(df))]
     plot(df$Ds, df$p_lowerstate,
          type = "l", lwd = 3, lty = 1,
          col = pal[length(pal)],
@@ -173,7 +155,6 @@ for(i in 1:length(examples_upper)) {
     dat$set <- factor(dat$set, levels = nodesets)
     dat$signal_ <- as.numeric(dat$signal) + adjust[i]
     dat$set_ <- as.numeric(dat$set)
-    ##dat$set_[grep("revdir", dat$set)] <- 8
     points(signal_ ~ tau, data = dat, col = dat$set_, pch = dat$set_, lwd = pt.lwd, cex = pt.cex)
 }
 if(save_plots) dev.off()

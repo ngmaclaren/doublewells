@@ -1,6 +1,6 @@
 import numpy as np
 import networkx as nx
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 from networkx.generators.community import LFR_benchmark_graph as LFR
 

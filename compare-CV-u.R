@@ -1,5 +1,5 @@
 ## Code by Neil MacLaren, 2/24/2022
-## Parameters and bifurcation parameter for Prosenjit Kundu, 3/4/2022
+## for preprint at https://arxiv.org/abs/2205.11592v1
 
 library(igraph)
 library(doublewells)
@@ -43,13 +43,13 @@ if(run_simulation) {
         dt <- 0.001#0.01 # step size for integration
         T <- τ/dt
 
-        initialx <- rep(.1, nnodes)# + noise(nnodes, s) # initial values of x_i
+        initialx <- rep(.1, nnodes)# initial values of x_i
 
         ## Simulation Parameters
         x <- initialx # an updating vector of x_i
 
         cutoff <- .1*nnodes # to stop simulation; production value is .1
-        state_cutoff <- 1.5#optimize(dw, c(r[1], r[2]), r = r)$minimum
+        state_cutoff <- 1.5
         in_lowerstate <- V(g) # initial vector of nodes in the lower state (all of them)
 
         ## Storage Vectors
@@ -88,10 +88,9 @@ if(run_simulation) {
         results[[i]] <- df
     }
     results <- do.call(rbind, results)
-    save(results, file = outfile)#"./data/cv-results.rda")
+    save(results, file = outfile)
 } else {
-    load(outfile)#"./data/cv-results.rda")
-    ##stepsize <- results$u[2] - results$u[1]
+    load(outfile)
 }
     
 
@@ -131,12 +130,9 @@ if(x_is_kdiff) {
     par(mar = c(5, 6, 2, 2) + 0.1)
     plot(range_u ~ kdiff_raw, data = df, pch = 1, cex = 2, lwd = 1.75, col = "black",
          axes = FALSE,
-         ##cex.lab = 1.75, cex.axis = 1.75, las = 1,
          xlim = c(0, 100), ylim = range(df$range_u),
-         ##cex = (df$N/100)*2,
-         xlab = "",#expression(italic(k)[max] - italic(k)[min]),#expression(k[diff]),
+         xlab = "",
          ylab = ""
-         ##ylab = "Magnitude of range of u"
          )
     box()
     axis(1, cex.axis = 1.75, las = 1)

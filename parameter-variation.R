@@ -8,24 +8,24 @@ save_results <- FALSE # TRUE
 run_sims <- FALSE # TRUE
 filename <- "./data/parameter-variation-results.rda"
 
-## which_network <- "pref_attach" # "dolphins" # 
-## filename <- paste0("./data/parameter-variation-results-", which_network, ".rda")
-## outfile <- paste0("./r-out/parameter-variation-", which_network, ".txt")
 choices <- c("pref_attach", "dolphins")
 
+                                        # Typical values commented below
 intensities <- c(.01, .1, .5) # , .05
 sample_sizes <- rev(c(150, 50, 25)) # 250, 
 rs <- list(c(1, 3, 5), c(1, 2.5, 7), c(1, 5.5, 7)) # , c(1, 4, 7)
 TUs <- c(50, 90, 100) # 75
+                                        # All parameter vectors should be the same length to support
+                                        # the loops below
 stopifnot(length(intensities) == length(sample_sizes) & length(sample_sizes) == length(rs))
 length.each <- length(intensities)
 n.param <- 4
-
+                                        # Main loop.
+                                        # For each of the two example networks, run the standard
+                                        # simulations with the exception of the parameter being
+                                        # adjusted.
 if(run_sims) {
-    ## data(pref_attach)
-    ## g <- pref_attach
-    data(list = choices)#which_network)
-    ##g <- get(which_network)
+    data(list = choices)
 
     results <- vector(mode = "list", length = n.param * length.each)
 
@@ -36,7 +36,6 @@ if(run_sims) {
         for(j in 1:length(choices)) {
             g <- get(choices[j])
             results[[i]][[j]] <- simulation(g, s = intensities[i], check_alts = TRUE, TU = 50)
-                                        #, check_equil = TRUE)
         }
     }
 
@@ -49,7 +48,6 @@ if(run_sims) {
             g <- get(choices[j])
             results[[i + adjust]][[j]] <- simulation(g, nsamples = sample_sizes[i],
                                                         check_alts = TRUE, TU = 50)
-                                        #, check_equil = TRUE)
         }
     }
 
@@ -61,7 +59,6 @@ if(run_sims) {
         for(j in 1:length(choices)) {
             g <- get(choices[j])
             results[[i + adjust]][[j]] <- simulation(g, r = rs[[i]], check_alts = TRUE)
-                                        #, check_equil = TRUE)
         }
     }
 
@@ -73,7 +70,6 @@ if(run_sims) {
         for(j in 1:length(choices)) {
             g <- get(choices[j])
             results[[i + adjust]][[j]] <- simulation(g, TU = TUs[i], check_alts = TRUE)
-                                        #, check_equil = TRUE)
         }
     }
 
@@ -88,7 +84,7 @@ if(run_sims) {
 pal <- c(
     ## https://personal.sron.nl/~pault/#sec:qualitative, the muted qualitative colour scheme
     "#CC6677", "#332288", "#DDCC77", "#117733", "#88CCEE",
-    "#882255", "#44AA99", "#999933", "#AA4499", "#DDDDDD"
+    "#882255", "#44AA99", "#999933", "#AA4499", "#AAAAAA"
     
 )
 palette(pal)
@@ -141,26 +137,3 @@ for(i in 1:length(results)) {
     }
     if(save_plots) dev.off()
 }
-
-
-
-## Uncomment and fix to print out results from the new format.
-## if(save_results) {
-##     if(!dir.exists("./r-out")) dir.create("./r-out")
-##     sink(outfile, append = FALSE, type = "output", split = TRUE)
-## }
-## for(i in 1:length(results)) {
-##     if(i <= length.each) {
-##         print(paste0("Intensity: ", intensities[i]))
-##     } else if(i > length.each & i <= 2*length.each) {
-##         print(paste0("N Samples: ", sample_sizes[i - length.each]))
-##     } else if(i > 2*length.each & i <= 3*length.each) {
-##         print(paste0("r = ", rs[[i - 2*length.each]]))
-##     } else print(paste0("TU = ", TUs[i - 3*length.each]))
-##     corr_results <- Kendall_correlations(results[[i]]$results)
-##     print("Means")
-##     print(corr_results$means)
-##     ##print("SDs")
-##     ##print(corr_results$sds)
-## }
-## if(save_results) sink()

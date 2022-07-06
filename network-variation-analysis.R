@@ -173,7 +173,7 @@ plotvals$set_ <- as.numeric(plotvals$set)
 ## )
 five_ten <- c(
     "#CC6677", "#332288", "#DDCC77", "#117733", "#88CCEE",
-    "#882255", "#44AA99", "#999933", "#AA4499", "#DDDDDD"
+    "#882255", "#44AA99", "#999933", "#AA4499", "#AAAAAA"
 )
 pal <- five_ten
 palette(pal)
