@@ -1,19 +1,15 @@
 import numpy as np
 import networkx as nx
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
 from networkx.generators.community import LFR_benchmark_graph as LFR
-
-# These parameters are chosen to match the number of expected nodes (100) and expected density (0.06)
-# used for the other model networks in this study. Additionally, some paramters, such as max and min
-# community size, were chosen so that the model would converge.
 
 # number of nodes
 n = 100
 # Power law exponent for the degree distribution
-tau1 = 1.8
+tau1 = 2#1.8
 # Power law exponent for the size of the clusters/communities
-tau2 = 1.04
+tau2 = 1.5#1.04
 # The probability of an edge crossing between communities
 mu = 0.1
 # The average degree

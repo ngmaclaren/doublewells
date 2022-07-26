@@ -1,16 +1,18 @@
 export(
     ## Models
-    "double_well", "double_well_coupled", "harvestmodel", "metapopulation", "noise", "empiricals",
-    "mutualistic",
+    "double_well", "double_well_coupled", "noise", "empiricals",
+    ## "harvestmodel", "metapopulation", "mutualistic",
 
     ## Early Warnings
     "sampled_eigenmethod", "sampled_sdmethod", "sampled_acmethod",
 
     ## Helper Functions
-    "select_stressnode", "get_gcc", "CVk", "Kendall_correlations",
+    ## "select_stressnode",
+    "get_gcc", "CVk", "Kendall_correlations", "generate_network",
 
     ## Algorithm Support Functions
-    "choose_sentinels", "choose_lowrank", "choose_antisentinels", "choose_altsentinels", "dw", "md",
+    "dw", "choose_sentinels", "choose_lowrank", "choose_largecorr", "choose_largesd",
+    ## "md", "choose_antisentinels", "choose_altsentinels",
 
     ## Counting Functions
     "upperstate", "lowerstate",
@@ -24,6 +26,3 @@ export(
     ## For plotting
     "dw_palette"
 )
-## old exports:
-##"windowed_sdmethod", "windowed_lagmethod", "windowed_acmethod", "Iadj", "sampled_MoranI"
-## "checks", "checkplot", "sentinel_ranking", "sentinel_ranking_ts"

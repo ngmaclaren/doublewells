@@ -1,4 +1,4 @@
-## Code by Neil MacLaren 3/23/2022
+## Code by Neil MacLaren 3/23/2022 ---> Change Thursday, July 14, 2022: check_alts = TRUE
 
 library(parallel)
 library(igraph)
@@ -44,7 +44,7 @@ run_sim <- function(network, seed) {
     data(list = c(network))
     g <- get(network)
                                         # And run the simulation with default settings.
-    simulation(g)
+    simulation(g, check_alts = TRUE)
 }
 
                                         # Main loop

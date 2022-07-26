@@ -1,3 +1,5 @@
+## Monday, July 18, 2022: DO NOT RUN
+
 ## Code by Neil MacLaren, 3/24/2022
 
 library(parallel)
@@ -29,6 +31,32 @@ dls <- gsub(".rda", "", dls)
                                         # and store the sim results in a list.
 sim_results <- lapply(dls, get)
 
+                                        # Monday, July 18, 2022
+                                        # Choosing only those networks with more than 1 transition
+check_transitions <- function(result, result_names = networks) {
+    transitions <- lapply(result, function(df) table(df$n_lowerstate))
+    names(transitions) <- result_names
+    tr <- transitions[order(names(transitions))]
+    ntr <- lapply(tr, function(x) x[which(x >= 15)])
+    lengths(ntr)
+}
+
+## level 1 is run
+## level 2 is network
+## level 3 is [1]: df [2]: sentinel history
+collect_dfs <- function(run_results, ...) {
+    lapply(run_results, function(dl) dl[[1]])
+}
+
+sim_dfs <- lapply(sim_results, collect_dfs)
+count_transitions <- lapply(sim_dfs, check_transitions)
+transitions <- as.data.frame(do.call(rbind, count_transitions))
+colnames(transitions) <- names(count_transitions[[1]])
+mins <- apply(transitions, 2, min)
+reduced_transitions <- transitions[, which(mins >= 2)]
+selected_networks <- colnames(reduced_transitions)
+
+
                                         # Using parallel processing, calculate Kendall correlations
                                         # for all simulations. The Kendall_correlations() function is
                                         # documented as part of the doublewells package. Variables to
@@ -45,23 +73,30 @@ corr_results <- clusterApply(
     }
 )
 stopCluster(threads)
+for(i in 1:length(corr_results)) {
+    for(j in 1:length(corr_results[[1]])) {
+        corr_results[[i]][[j]]["run", 1] <- i
+    }
+}
+
                                         # Store correlation results as a list of data frames
 df_list <- lapply(corr_results, function(x) as.data.frame(t(do.call(cbind, x))))
                                         # Store the names of the early warning indicator variables
-varcols <- colnames(df_list[[1]])
+varcols <- colnames(df_list[[1]])[-which(colnames(df_list[[1]]) %in% c("run", "network"))]
                                         # And update the data frames with metadata.
 for(i in 1:length(df_list)) {
     df_list[[i]]$network <- networks
-    df_list[[i]]$run <- i
+    ##df_list[[i]]$run <- i
 }
                                         # Reshape for statistical analysis.
-                                        # Previous output was a matrix/data frame of correlation values
-                                        # for the different indicators. For analysis, a row should
-                                        # contain the indicator value and the indicator label, as well
-                                        # as the network label.
+                                        # Previous output was a matrix/data frame of correlation
+                                        # values for the different indicators. For analysis, a row
+                                        # should contain the indicator value and the indicator label,
+                                        # as well as the network label.
 rdf_list <- lapply(df_list, reshape, varying = varcols, v.names = "tau",
                    timevar = "ewi_", idvar = "network", times = varcols,
-                   new.row.names = 1:10000, direction = "long")
+                   #new.row.names = 1:10000,
+                   direction = "long")
                                         # This loop splits the `varcols` variable names for analysis
                                         # convenience. Specifically, it separates the variables into
                                         # a label for the indicator (avg SD, avg AC, etc.) and a label
@@ -75,12 +110,21 @@ for(i in 1:length(rdf_list)) {
     rdf$nodeset <- factor(rdf$nodeset, levels = c("all", "lower", "sentinel"),
                           ordered = FALSE)
                                         # Metadata is also added. 
-    rdf$run <- i
+    ##rdf$run <- i
+    rdf$rownames <- rownames(rdf)
+    newcols <- strsplit(rdf$rownames, split = ".", fixed = TRUE)
+    newcols <- do.call(rbind, newcols)
+    rdf$network <- newcols[, 1]
+    rdf <- rdf[, -grep("rownames", colnames(rdf))]
                                         # And the list of reshaped data frames updated.
     rdf_list[[i]] <- rdf
 }
                                         # All the data frames are combined into one for analysis. 
 rdf <- do.call(rbind, rdf_list)
+rownames(rdf) <- 1:length(rownames(rdf))
+                                        # Monday, July 18, 2022
+                                        # Filter on `selected_networks
+rdf <- rdf[rdf$network %in% selected_networks, ]
 
                                         # The models themselves.
                                         # These are linear mixed effects models, or repeated measures
@@ -92,19 +136,19 @@ rdf <- do.call(rbind, rdf_list)
                                         # runs.
 
                                         # The model for the maximum eigenvalue indicator...
-maxeig <- lme(tau ~ nodeset, random = ~ 1 | run/network/nodeset,
+maxeig <- lme(tau ~ nodeset, random = ~ 1 | network,#/run,#/nodeset,
               data = rdf, subset = ewi == "maxeig")
                                         # the maximum standard deviation...
-maxsd <- lme(tau ~ nodeset, random = ~ 1 | run/network/nodeset,
+maxsd <- lme(tau ~ nodeset, random = ~ 1 | network,#/run,#/nodeset,
              data = rdf, subset = ewi == "maxsd")
                                         # average standard deviation...
-avgsd <- lme(tau ~ nodeset, random = ~ 1 | run/network/nodeset,
+avgsd <- lme(tau ~ nodeset, random = ~ 1 | network,#/run,#/nodeset,
              data = rdf, subset = ewi == "avgsd")
                                         # maximum autocorrelation
-maxac <- lme(tau ~ nodeset, random = ~ 1 | run/network/nodeset,
+maxac <- lme(tau ~ nodeset, random = ~ 1 | network,#/run,#/nodeset,
              data = rdf, subset = ewi == "maxac")
                                         # and for the average autocorrelation coefficient.
-avgac <- lme(tau ~ nodeset, random = ~ 1 | run/network/nodeset,
+avgac <- lme(tau ~ nodeset, random = ~ 1 | network,#/run,#/nodeset,
              data = rdf, subset = ewi == "avgac")
 
                                         # If saving results, open the connection
@@ -166,51 +210,52 @@ plotvals$set <- factor(plotvals$set, levels = nodesets)
 plotvals$signal_ <- rev(as.numeric(plotvals$signal))
 plotvals$set_ <- as.numeric(plotvals$set)
 
-## colors <- c(
-##     "sienna", # all
-##     "navy", # lower
-##     "olivedrab" # sentinel
-## )
-five_ten <- c(
-    "#CC6677", "#332288", "#DDCC77", "#117733", "#88CCEE",
-    "#882255", "#44AA99", "#999933", "#AA4499", "#AAAAAA"
-)
-pal <- five_ten
-palette(pal)
+palette("R4")#conference val: "Tableau 10")
 
                                         # This block makes the ladder plot based on the calculated
                                         # values from get_values().
 
-plot_errorbars <- FALSE # TRUE
-## yticklabels <- c("Maximum Autocorrelation", #"Average Standard Deviation",
-##                  "Average Autocorrelation")
+plot_errorbars <- TRUE # FALSE
 yticklabels <- c("Dom. Eig.", "Max. SD", "Avg. SD", "Max. AC", "Avg. AC")
-##legendlabels <- c("All Nodes", "Lower State Nodes", "Sentinel Nodes")
-legendlabels <- c("All", "Lower State", "Sentinel")
-ht <- 4
+legendlabels <- c("All", "Lower State", "High Input")
+ht <- 6
 wd <- 8
-##if(plot_errorbars) pchs <- 3 else pchs <- 1:3
-pchcex <- 2; pchs <- 1:3
-lwd <- 3
+if(plot_errorbars) {
+    pchcex <- 1; pchs <- 1:3; lty <- 1; lwd <- 5
+    plotvals$adjust <- plotvals$signal_ - ((plotvals$set_ - 2)/5)
+} else {
+    pchcex <- 2; pchs <- 1:3; lwd <- 3#4
+}
 if(save_plots) {
     pdf("./img/kendall-corr-figure.pdf", width = wd, height = ht)
+    ##pdf("./complex-networks-2022/LatexAbstractTemplate/conference-kendall-fig.pdf",
+      ##  width = wd, height = ht)
 } else dev.new(width = wd, height = ht)
-par(mar = c(5, 8, 1, 1) + 0.1)
-ylims <- range(plotvals$signal_) + c(-.5, .5)
-xlims <- c(.7, 1)
+par(mar = c(5, 8, 0, 1) + 0.1)
+ylims <- range(plotvals$signal_) + c(-.33, .33)
+xlims <- c(.6, .9)
 plot(NULL, ylim = ylims, xlim = xlims, #xlim = c(min(lowers)*.9, max(uppers)*1.1),
      ylab = "", xlab = expression(tau), yaxt = "n", bty = "n",
      cex.lab = 1.75, cex.axis = 1.75)
 axis(side = 2, tick = FALSE, labels = yticklabels, at = max(plotvals$signal_):1, las = 1,
      cex.axis = 1.75)
 ##ypos <- 2 + c((1/3), 0, -(1/3))
-points(signal_ ~ est, data = plotvals, pch = pchs, lwd = lwd, col = plotvals$set_, cex = pchcex)
 if(plot_errorbars) {
-    segments(x0 = plotvals$lower, x1 = plotvals$upper, y0 = plotvals$signal_,
+    points(adjust ~ est, data = plotvals, pch = pchs, lwd = lwd, col = plotvals$set_, cex = pchcex)
+    ## segments(x0 = plotvals$est, y0 = plotvals$signal_ - adjust, y1 = plotvals$signal_ + adjust,
+    ##          lwd = lwd, lty = lty, col = plotvals$set_)
+    ## rect(xleft = plotvals$lower, xright = plotvals$upper,
+    ##      ybottom = plotvals$signal_ - adjust, ytop = plotvals$signal_ + adjust,
+    ##      density = NULL, col = NA, border = plotvals$set_, lty = lty, lwd = lwd)
+    segments(x0 = plotvals$lower, x1 = plotvals$upper, y0 = plotvals$adjust,
              lty = 1, lwd = lwd, col = plotvals$set_)
-}
-legend("bottomright", legend = legendlabels, col = 1:3, bty = "n", pch = 1:3, pt.lwd = lwd,
+    legend("topleft", legend = legendlabels, col = 1:3, bty = "n", lwd = lwd, lty = lty, pch = pchs)
+    abline(h = (1:4) + 0.5, col = "gray", lwd = .5, lty = 2)
+} else {
+    points(signal_ ~ est, data = plotvals, pch = pchs, lwd = lwd, col = plotvals$set_, cex = pchcex)
+    legend("bottomright", legend = legendlabels, col = 1:3, bty = "n", pch = 1:3, pt.lwd = lwd,
        cex = 1.25)
+}
 if(save_plots) dev.off()
 
 ##abline(h = 1.5, col = "gray", lwd = .5, lty = 1)
@@ -226,3 +271,73 @@ if(save_plots) dev.off()
 
 
 ## nodesets <- c("all", "lower", "sentinel")
+
+
+
+
+## #### Do not run
+## ### Code to observe variation due to network
+## hist(rdf$tau)
+## summary(rdf$tau)
+
+## dev.new(height = 7, width = 14)
+## boxplot(tau ~ as.factor(network), data = rdf)
+
+## plotdf <- subset(rdf, ewi == "avgac")
+## plotdf$netno <- as.integer(factor(plotdf$network))
+## plotdf$adjust <- as.numeric(factor(plotdf$nodeset))/3 - (1/3)
+
+## svg("./img/network-var-vis-test.svg", height = 7, width = 14)
+## palette("Polychrome 36")
+## plot(NULL,
+##      xlim = range(plotdf$netno), ylim = range(plotdf$tau),
+##      xlab = "Network x NodeSet", ylab = "tau")
+## points(x = plotdf$netno + plotdf$adjust,
+##        y = plotdf$tau,
+##        pch = plotdf$netno,
+##        col = plotdf$netno)
+## dev.off()
+
+
+
+## ## Checking intuition on number of transitions
+## dl <- sim_results[[1]]
+## dfs <- vector("list", 22)
+## for(i in 1:length(dl)) dfs[[i]] <- dl[[i]][[1]]
+## transitions <- lapply(dfs, function(df) table(df$n_lowerstate))
+## names(transitions) <- networks
+## tr <- transitions[order(names(transitions))]
+## lapply(tr, function(x) x[which(x >= 15)]) # yes, matches.
+## ## Try a different sim run
+## dl <- sim_results[[7]]
+## dfs <- vector("list", 22)
+## for(i in 1:length(dl)) dfs[[i]] <- dl[[i]][[1]]
+## transitions <- lapply(dfs, function(df) table(df$n_lowerstate))
+## names(transitions) <- networks
+## tr <- transitions[order(names(transitions))]
+## lapply(tr, function(x) x[which(x >= 15)])
+
+## check_transitions <- function(result, result_names = networks) {
+##     transitions <- lapply(result, function(df) table(df$n_lowerstate))
+##     names(transitions) <- result_names
+##     tr <- transitions[order(names(transitions))]
+##     ntr <- lapply(tr, function(x) x[which(x >= 15)])
+##     lengths(ntr)
+## }
+
+## ## level 1 is run
+## ## level 2 is network
+## ## level 3 is [1]: df [2]: sentinel history
+## collect_dfs <- function(run_results, ...) {
+##     lapply(run_results, function(dl) dl[[1]])
+## }
+
+## test1 <- lapply(sim_results, collect_dfs)
+## test2 <- lapply(test1, check_transitions)
+## test3 <- as.data.frame(do.call(rbind, test2))
+## colnames(test3) <- names(test2[[1]])
+## lapply(test3, summary)
+## mins <- apply(test3, 2, min)
+## test4 <- test3[, which(mins >= 2)]
+
+## test4 <- subset(t(test3), . >= 2)
