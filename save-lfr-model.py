@@ -7,9 +7,9 @@ from networkx.generators.community import LFR_benchmark_graph as LFR
 # number of nodes
 n = 100
 # Power law exponent for the degree distribution
-tau1 = 2#1.8
+tau1 = 2
 # Power law exponent for the size of the clusters/communities
-tau2 = 1.5#1.04
+tau2 = 1.5
 # The probability of an edge crossing between communities
 mu = 0.1
 # The average degree

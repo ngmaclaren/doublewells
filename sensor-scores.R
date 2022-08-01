@@ -3,12 +3,12 @@ library(igraph)
 library(doublewells)
 
                                         # Calculate Aparicio et al.'s ρ for the two example networks
-choices <- c("pref_attach", "dolphins")
+choices <- c("powerlaw", "dolphins")
 data(list = choices)
 set.seed(123)
 
-                                        # BA network first
-g <- pref_attach
+                                        # Power-law network first
+g <- powerlaw
                                         # The calculations for ρ are in the doublewells package
                                         #
                                         # Run the simulation with standard settings for nodes starting

@@ -1,4 +1,4 @@
-## Monday, July 18, 2022: DO NOT RUN
+## Monday, July 18, 2022: DO NOT RUN. Needs to be updated based on final simulation runs.
 
 ## Code by Neil MacLaren, 3/24/2022
 

@@ -1,28 +1,19 @@
 export(
     ## Models
-    "double_well", "double_well_coupled", "noise", "empiricals",
-    ## "harvestmodel", "metapopulation", "mutualistic",
+    "empiricals", "dw", "double_well", "double_well_coupled", "noise", 
 
     ## Early Warnings
     "sampled_eigenmethod", "sampled_sdmethod", "sampled_acmethod",
 
     ## Helper Functions
-    ## "select_stressnode",
-    "get_gcc", "CVk", "Kendall_correlations", "generate_network",
+    "get_gcc", "CVk", "Kendall_correlations",
 
     ## Algorithm Support Functions
-    "dw", "choose_sentinels", "choose_lowrank", "choose_largecorr", "choose_largesd",
-    ## "md", "choose_antisentinels", "choose_altsentinels",
+    "choose_sentinels", "choose_lowrank", "choose_largecorr", "choose_largesd",
 
     ## Counting Functions
     "upperstate", "lowerstate",
 
     ## Analysis
-    "simulation",
-
-    ## Pre-defined, named motifs
-    "complete", "feedback", "feedforward", "fromthemiddleout", "linemotif", "tothemiddle",
-
-    ## For plotting
-    "dw_palette"
+    "simulation"
 )

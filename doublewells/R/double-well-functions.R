@@ -1,5 +1,19 @@
 ## Models
 
+                                        # A vector of names of empirical data sets stored in this
+                                        # package.
+empiricals <- c(
+    "karate", "pira", "netsci", "jazz","drugusers", "hall", "highschoolboys", "surfersb",
+    "weaverbirds", "dolphins", "nestbox", "lizards", "bats", "elephantseals", "tortoises",
+    "housefinches", "voles"
+)
+
+                                        # Basic double well model
+dw <- function(x, r) {
+    "This is the basic double well differential equation. For finding minima/maxima."
+    -(x - r[1])*(x - r[2])*(x - r[3])
+}
+
 double_well <- function(x, r1, r2, r3, dt, noise = NULL, stress = 0) {
     "Calculates the next step in a double well simulation with no coupling and optional stress and noise. The state variable is x and r1, r2, and r3 are parameters. The `noise` argument if not NULL should be a function that generates a single random value."
     if(is.null(noise)) {
@@ -14,7 +28,7 @@ double_well <- function(x, r1, r2, r3, dt, noise = NULL, stress = 0) {
 
 double_well_coupled <- function(x, r1, r2, r3, D, A, dt, noise = NULL, stress = rep(0, length(x))) {
     "Calculates the next step in a double well simulation and network-based coupling. Variables are generally as for `double_well`, with `x` a vector of current states, D as the coupling strength, and A as the adjacency matrix. The `noise` argument if not NULL should be a function that generates a vector of random values of length equal to the length of x."
-    if(is.null(noise)) {# rowSums; test for re-run
+    if(is.null(noise)) {
         deltax <- (-(x - r1)*(x - r2)*(x - r3) + D*colSums(A*x) + stress)*dt
     } else {
         deltax <- (-(x - r1)*(x - r2)*(x - r3) + D*colSums(A*x) + stress)*dt + noise
@@ -23,82 +37,6 @@ double_well_coupled <- function(x, r1, r2, r3, D, A, dt, noise = NULL, stress = 
     nextx <- x + deltax
     nextx
 }
-
-## harvestmodel <- function(x, r, K, cp, h, dt, s, noise = FALSE) {
-##     "Calculates the next step in the harvest model system used by Dakos et al. (2012). Dakos et al. (2012) state that in a deterministic system the model should bifurcate at around c = 2.604. Here, c = cp because c is a function in R."
-##     whitenoise <- function(s) rnorm(1, 0, s)
-    
-##     if(noise) {
-##         diff <- ((r*x*(1 - (x/K))) - (cp*(x^2/(x^2 + h^2))))*dt + whitenoise(s)
-##     } else {
-##         diff <- ((r*x*(1 - (x/K))) - (cp*(x^2/(x^2 + h^2))))*dt
-##     }
-
-##     nextx <- x + diff
-##     nextx
-## }
-
-## metapopulation <- function(x, K, h, A, D, dt = 0.01, noise = NULL) {
-##     "From Weinans et al 2019. x_i is the abundance at node i, K_i the carrying capacity, h_i the maximum harvesting rate (c in Weinans), d_ij is migration between i and j (symmetric). In Weinans et al, the noise process σ_xi*dW_i is a Wiener process (i.e., Gaussian noise) with mean 0 and variance σ. Weinans et al parameter settings assumed three patches with K_i = [10 13 8], c_i = [3, 2, 2.3], d = [[0, .2, .08] [.2 .08 0] [.08 .08 0] ]. x (N in Weinans), K, and c are vectors, A a symmetric adjacency matrix weighted by a connection parameter D."
-##     N <- length(x)
-##                                         # Make matrices for x_i and x_j
-##                                         # These matrices support the summation below
-
-##                                         # For the js, col 1 is x[1], col 2 is x[2], and so on
-##     x_j <- matrix(rep(x, nrow(A)), byrow = TRUE, nrow = nrow(A))
-##                                         # For the is, row 1 is x[1], row 2 is x[2], and so on
-##     x_i <- matrix(rep(x, ncol(A)), byrow = FALSE, ncol = ncol(A))
-
-##     # The diff eq model itself. The summation 
-##     deltax <- (x*(1 - (x/K)) - ((h*(x^2))/(1 + (x^2))) + D*colSums(A*(x_j - x_i)))*dt + noise
-##     nextx <- x + deltax
-##     nextx
-## }
-
-## md <- function(x, K, C) {
-##     "The node dynamics for the mutualistic system of Gao et al 2016."
-##     x*(1 - (x/K))*((x/C) - 1)
-## }
-
-## mutualistic <- function(
-##                                         # a vector of states
-##                         x
-##                                         # A (weighted) adjacency matrix
-##                       , A
-##                                         # The parameter fw will proportionately decrease the coupling
-##                                         # term. If fw = 1, there is no effect.
-##                                         #
-##                                         # Changing this around from Gao et al 2016 to make it more
-##                                         # like D in the doublewell model.
-##                       , fw = 0
-##                                         # migration rate
-##                       , B = 0.1
-##                                         # environment carrying capacity
-##                       , K = 5
-##                                         # Allee constant
-##                       , C = 1 
-##                                         # D, E, and H are the parameters of the "saturation rate of
-##                                         # the response function"
-##                       , D = 5 
-##                       , E = 0.9
-##                       , H = 0.1
-##                                         # strength of the noise process
-##                       , s = 0.05
-##                                         # the noise process
-##                       , noise = function(x, s) rnorm(length(x), sd = s)
-##                                         # Δt for integration
-##                       , dt = 0.01
-##                         ) {
-##     ##XI <- matrix(rep(x, times = length(x)), byrow = FALSE, ncol = length(x))
-##     ##XJ <- matrix(rep(x, times = length(x)), byrow = TRUE, nrow = length(x))
-##     ##diffusion <- (XI * XJ)/(D + (E*XI) + (H*XJ))
-##     ##coupling <- fw*A * diffusion
-##     cX <- outer(x, x, function(xi, xj) (xi*xj)/(D + E*xi + H*xj))
-##     diffx <- (B + x*(1 - (x/K))*((x/C) - 1) + fw*rowSums(A*cX))*dt + noise(x, s)*sqrt(dt)
-##     nextx <- x + diffx
-##     nextx
-## }
-
 
 noise <- function(n, s, f = rnorm) {
     "A function to generate `n` random noise values from a distribution with standard deviation `s`. Currently set up only for Gaussian noise, but could be expanded to support more distributions."
@@ -110,9 +48,7 @@ noise <- function(n, s, f = rnorm) {
                                         # These three functions calculate early warning indicators
                                         # based on the a matrix X, which records the state of all
                                         # chosen nodes over the course of the simulation, and a
-                                        # vector of samples, which should be indices of X. It is
-                                        # easiest to determine what those samples should be outside
-                                        # of these functions (see simulation(), below, for an example.
+                                        # vector of samples, which should be row indices of X.
 sampled_eigenmethod <- function(X, samples, nodes, var_only = FALSE) {
     "From an output matrix, X, take X at `samples` time steps, make a covariance matrix from that data, and return the dominant eigenvalue of the covariance matrix."
                                         # If only one node, cannot compute a covariance matrix
@@ -135,10 +71,6 @@ sampled_eigenmethod <- function(X, samples, nodes, var_only = FALSE) {
     }
 }
 
-                                        # These two functions are written in a slightly different
-                                        # way, in that they expect a matrix X that is already
-                                        # subsetted for the right columns/nodes. In the future, these
-                                        # functions may be rewritten to match sampled_eigenmethod.
 sampled_sdmethod <- function(X, samples) {
     "Calculate the standard deviation sd(x_i) for output matrix, X, over the given samples. Unlike `sampled_eigenmethod`, this function expects X to be provided with the correct (selected) columns."
                                         # This function could be called for univariate data, in which
@@ -156,65 +88,17 @@ sampled_acmethod <- function(X, samples, lag = 1) {
                                         # This function could be called for univariate data, in which
                                         # case X should not be a matrix
     if(!is.matrix(X)) {
-                                        # and cor() can be calculated from the data vector.
-                                        # Tuesday, May 3, 2022: Straight correlation like this is not
-                                        # quite correct. The acf() function does the correct
-                                        # calculation; for long time series the difference does not
-                                        # appear to be large.
-        ##cor(X[samples], X[samples - lag])
+                                        # and acf() can be calculated from the data vector.
         acf(X[samples], lag.max = lag, plot = FALSE)$acf[2]
     } else {
-                                        # Otherwise, the same cor() call needs to be wrapped in
+                                        # Otherwise, the same acf() call needs to be wrapped in
                                         # apply() to independently calculate the correlation within
                                         # each column (node).
-        ##apply(X, 2, function(x) cor(x[samples], x[samples - lag]))
         apply(X[samples, ], 2, function(x) acf(x, lag.max = lag, plot = FALSE)$acf[2])
     }
 }
 
 ## Helper Functions
-
-## select_stressnode <- function(g, add_stress_to = NULL) {
-##     "Choose a random node to which to apply stress. Can constrain choice to either 'high' or 'low' degree nodes, in which case nodes are chosen from the top or bottom quintiles of the degree distribution, respectively. Alternatively, a random node with the 'highest' or 'lowest' (non-zero) degree can be chosen."
-##     require(igraph)
-##                                         # This function is not used in the current version of the
-##                                         # analysis.
-
-##                                         # The purpose of this function is to choose a random node
-##                                         # from among the available options meeting some criteria.
-
-##                                         # If there are no criteria, the function chooses randomly
-##                                         # from among all nodes.
-##     if(is.null(add_stress_to)) {
-##         nnodes <- vcount(g)
-##         selectnode <- sample(1:nnodes, 1)
-##         return(selectnode)
-##     } else {
-##                                         # Otherwise, it sets quantile boundaries on the degree
-##                                         # distribution: the bottom 20% will be considered low degree,
-##                                         # the top 20% will be considered high degree, and the minimum
-##                                         # and maximum degree will be "lowest" and "highest",
-##                                         # respectively. In any category, the function will choose
-##                                         # randomly from among those nodes fitting the criteria (for
-##                                         # example, if two nodes have the highest degree,
-##                                         # select_stressnode() will choose randomly from between those
-##                                         # two).
-##         k <- degree(g)
-##         breaks <- quantile(k, probs = c(.2, .8))
-##         if(add_stress_to == "high") {
-##             poss <- V(g)[which(k >= breaks[2])]
-##         } else if(add_stress_to == "low") {
-##             poss <- V(g)[which(k <= breaks[1] & k > 0)]
-##         } else if(add_stress_to == "highest") {
-##             poss <- V(g)[which(k == max(k))]
-##             if(length(poss) == 1) return(poss)
-##         } else if(add_stress_to == "lowest") {
-##             poss <- V(g)[which(k == min(k[which(k > 0)]))]
-##         }
-##         selectnode <- sample(poss, 1)
-##         return(selectnode)
-##     }
-## }
 
 get_gcc <- function(g) {
     "Return the largest (weakly) connected component of a graph."
@@ -245,22 +129,6 @@ Kendall_correlations <- function(df, constrain = TRUE, cutoff = 15, check_alts =
                                  b_param = "Ds") {
     "This function relies on the exact output data frame of the `doublewells::simulation` function: it takes that data frame as input and returns a list with (1) a matrix of mean Kendall correlations, and (2) the standard deviation of those correlations. By default (`constrain = TRUE`) this function will only return computed mean/sd of correlations based on a 'sufficient' amount of data---that is, when the correlation was computed from at least `cutoff` pairs of values for D and the early warning indicator."
                                         # Select the columns with early warning indicator values
-    ## columns <- colnames(df)[
-    ##     c(grep("_all", colnames(df)),
-    ##       grep("_lower", colnames(df)),
-    ##       grep("_sentinel", colnames(df)))
-    ## ]
-    ##                                     # There are more columns if checking alternates
-    ## columns <- c(columns, colnames(df)[
-    ##                           c(grep("_upper", colnames(df)),
-    ##                             grep("_antisentinel", colnames(df)),
-    ##                             grep("_altsentinel", colnames(df)),
-    ##                             grep("_lowrank", colnames(df))
-    ##                             )
-    ##                       ])
-    ##                                     # n_lowerstate shouldn't be in this vector, but it's returned
-    ##                                     # by the grep statement above
-    ## columns <- columns[which(columns != "n_lowerstate")]
     columns <- colnames(df)[!(colnames(df) %in% c("n_lowerstate", "Ds"))]
                                         # Split-Apply-Combine
                                         # SPLIT the data frame so that each grouping has the same
@@ -281,7 +149,6 @@ Kendall_correlations <- function(df, constrain = TRUE, cutoff = 15, check_alts =
                                         # Take only the top row, dropping the first column (which has
                                         # the correlation of D with itself.
                 use = "pairwise.complete.obs")[1, -1]
-                ##use = "complete.obs")[1, -1]
         )
     })
                                         # COMBINE
@@ -304,44 +171,8 @@ Kendall_correlations <- function(df, constrain = TRUE, cutoff = 15, check_alts =
     return(results)
 }
 
-## Random Networks
-
-generate_network <- function(choice = c("random_regular", "max_entropy", "sphere_surface",
-                                        "me_islands", "pref_attach", "small_world"),
-                             nnodes = 100, cprob = .06,
-                             rr.k = 6,
-                             sph.dim = 3, sph.radius = .279,
-                             nislands = 5, nbridges = 1,
-                             pa.power = 1.5,
-                             pa.outdist = c(0, 10, (8+1/3), (6+2/3), 5, (3+1/3), (1+2/3), (5/6))*cprob,
-                             sw.dim = 1, sw.nei = 3, sw.p = .1) {
-    "Given a chosen network model type, output an instance of that network with parameters that produce a network with 100 nodes and an expected density of about 0.06."
-    require(igraph)
-                                        # Only one graph will be produced, based on the user's choice.
-    choice <- match.arg(choice)
-    
-    switch(
-        choice,
-                                        # Random Regular
-        random_regular = sample_k_regular(nnodes, rr.k),
-                                        # Maximum Entropy, or Erdos-Renyi
-        max_entropy = sample_gnp(nnodes, cprob),
-                                        # Sphere Surface (via the sample_dot_product() function)
-        sphere_surface = sample_dot_product(
-            sample_sphere_surface(dim = sph.dim, n = nnodes, radius = sph.radius)),
-                                        # A max entropy graph with community structure
-        me_islands = sample_islands(
-            islands.n = nislands, islands.size = nnodes/nislands,
-            islands.pin = cprob*nislands * (100 - nbridges)/100,
-            n.inter = nbridges),
-                                        # A preferential attachement network
-        pref_attach = sample_pa(nnodes, power = pa.power, out.dist = pa.outdist, directed = FALSE),
-                                        # And a small world network
-        small_world = sample_smallworld(dim = sw.dim, size = nnodes, nei = sw.nei, p = sw.p)
-    )
-}
-
 ## Algorithm Support Functions
+
 choose_sentinels <- function(g, X, samples, n = 5, state_check = samples[length(samples)],
                              state_cutoff = NULL, upper_state_cutoff = NULL,
                              from_upper = FALSE, low_input = FALSE) {
@@ -392,7 +223,6 @@ choose_lowrank <- function(g, X, samples, cutoff = 2.5, state_check = samples[le
 
 choose_random <- function(g, sentinels, n = 5) {
     "Choose `n` nodes completely at random from g."
-    ##avail <- V(g)#OLD: [which(!(V(g) %in% sentinels))]
                                         # Select random completely at random from the
                                         # available nodes. All nodes are available.
     random <- V(g)[sample(V(g), n)]
@@ -400,41 +230,19 @@ choose_random <- function(g, sentinels, n = 5) {
     return(random)
 }
 
-                                        # R': Wednesday, July 13, 2022 no longer used
-## choose_altsentinels <- function(X, samples, lower, upper, n = 5, from_upper = FALSE) {
-##     "Choose `n` sentinel nodes without using information from the network."
-##     if(length(lower) == 0 | length(upper) == 0) return(rep(NA, n))
-##     lnodes <- X[samples, lower]
-##     unodes <- X[samples, upper]
-##     if(from_upper) {
-##         avail <- as.numeric(upper)
-##         ranks <- apply(unodes, 2, function(u) sum(cor(u, lnodes)))
-##     } else {
-##         avail <- as.numeric(lower)
-##         ranks <- apply(lnodes, 2, function(u) sum(cor(u, unodes)))
-##     }
-##     df <- data.frame(avail, ranks)
-##     df <- df[order(df$ranks, decreasing = TRUE), ]
-##     if(nrow(df) < n) {
-##         return(df$avail)
-##     } else {
-##         return(df$avail[1:n])
-##     }
-## }
-
-                                        # R'': largecorr
+                                        # R': largecorr
 choose_largecorr <- function(X, samples, lower, upper, n = 5, from_upper = FALSE) {
     if(from_upper) {
         stop("`Large Corr' not implemented from upper state.")
-        avail <- as.numeric(upper)
-        ranks <- apply(unodes, 2, function(u) sum(cor(u, X[samples, -u]) * mean(X[samples, -u])))
-        df <- data.frame(avail, ranks)
-        df <- df[order(df$ranks, decreasing = FALSE), ]
     } else {
+                                        # Lower-state nodes are available to transition.
         avail <- as.numeric(lower)
+                                        # Rank them by Pearson cross-correlation, the sum of
+                                        # cross-correlation coefficients with each other node.
         ranks <- sapply(lower, function(u) {
             sum(cor(X[samples, u], X[samples, -u]) * mean(X[samples, -u]))
         })
+                                        # Collect ranks and return sentinels as for choose_sentinels
         df <- data.frame(avail, ranks)
         df <- df[order(df$ranks, decreasing = TRUE), ]
     }
@@ -445,7 +253,8 @@ choose_largecorr <- function(X, samples, lower, upper, n = 5, from_upper = FALSE
     }
 }
 
-                                        # R''': largesd
+                                        # R'': largesd
+                                        # Same basic procedure, but ranking on sd()
 choose_largesd <- function(X, samples, lower, upper, n = 5, from_upper = FALSE) {
     if(from_upper) {
         stop("`Large SD' not implemented from upper state.")
@@ -476,28 +285,22 @@ lowerstate <- function(x, cutoff = 2.3) {
 
 ## Analysis
 
-dw <- function(x, r) {
-    "This is the basic double well differential equation. For finding minima/maxima."
-    -(x - r[1])*(x - r[2])*(x - r[3])
-}
-
-md <- function(x, K, C) {
-    "The node dynamics for the mutualistic system of Gao et al 2016."
-    x*(1 - (x/K))*((x/C) - 1)
-}
-
+                                        # Calculate ρ from Aparicio et al. 2021
+                                        # The below calculations must be done for each level of D, so
+                                        # this function is meant to be used inside `simulation`. If
+                                        # the calc_rho option is chosen, `simulation` outputs a data
+                                        # frame with results for each level of D.
 calc_rho <- function(X, samples) {
-    ## do this for each level of D...
     maxs <- apply(X[samples, ], 2, max)
     mins <- apply(X[samples, ], 2, min)
     means <- apply(X[samples, ], 2, mean)
+                                        # the value for each node is (max - min)/mean
     (maxs - mins)/means
 }
 
 simulation <- function(g
                                         # These defaults are set for consistent behavior across
                                         # simulations in this study.
-
                                         # Evenly spaced double wells parameters
                      ,
                        r = c(1, 4, 7)
@@ -593,20 +396,16 @@ simulation <- function(g
     s <- s*sqrt(dt)
 
     ## Early Warnings Params
-    ##lag <- lag/dt
-
-    ## sample_spacing <- 0.1
     sample_spacing <- sample_spacing/dt
                                         # It is easiest to select samples once by "counting
                                         # backwards" from the end of the simulation.
     samples <- seq(from = T, by = -sample_spacing, length.out = nsamples)
-                                        # All x_i are initially set to 1 with no noise
+                                        # All x_i are initially set to 1 (lower) or 7 (upper)
     if(from_upper) {
         initialx <- rep(max(r), nnodes)
     } else {
         initialx <- rep(min(r), nnodes)
     }
-    ##initialx <- rep(1, nnodes)
     
     ## Storage Vectors
     n_lowerstate <- numeric()
@@ -619,8 +418,7 @@ simulation <- function(g
     sentinel_history <- list() # store these and similar lists for diagnostic purposes
     if(check_equil) equils <- list()
 
-                                        # If checking alternatives each storage vector needs two
-                                        # additional positions
+                                        # If checking alternatives
     if(check_alts) {
         maxeig$upper <- numeric()
         maxeig$lowrank <- numeric()
@@ -802,18 +600,11 @@ simulation <- function(g
             sds$random <- sampled_sdmethod(X[, random], samples)
             acs$random <- sampled_acmethod(X[, random], samples, lag = lag)
                                         # Large Correlation Sentinels
-            ##if(length(in_upperstate) > 0 & length(in_lowerstate) > 0) {
-            ##largecorrs_ <- na.omit(largecorrs)
             if(!from_upper) {
                 maxeig$largecorr[i] <- sampled_eigenmethod(X, samples = samples, nodes = largecorrs)
                 sds$largecorr <- sampled_sdmethod(X[, largecorrs], samples)
                 acs$largecorr <- sampled_acmethod(X[, largecorrs], samples, lag = lag)
             }
-            ## } else {
-            ##     maxeig$largecorr[i] <- NA
-            ##     sds$largecorr <- rep(NA, ncol(X))
-            ##     acs$largecorr <- rep(NA, ncol(X))
-            ## }
                                         # Large Standard Deviation Sentinels
             if(!from_upper) {
                 maxeig$largesd[i] <- sampled_eigenmethod(X, samples = samples, nodes = largesds)
@@ -823,9 +614,11 @@ simulation <- function(g
                                         # Reverse Direction Sentinels
             lowinput_sentinels_ <- na.omit(lowinput_sentinels)
             if(length(lowinput_sentinels_) > 0) {
-                maxeig$lowinput_sentinel[i] <- sampled_eigenmethod(X, samples = samples, nodes = lowinput_sentinels_)
+                maxeig$lowinput_sentinel[i] <- sampled_eigenmethod(X, samples = samples,
+                                                                   nodes = lowinput_sentinels_)
                 sds$lowinput_sentinel <- sampled_sdmethod(X[, lowinput_sentinels_], samples)
-                acs$lowinput_sentinel <- sampled_acmethod(X[, lowinput_sentinels_], samples, lag = lag)
+                acs$lowinput_sentinel <- sampled_acmethod(X[, lowinput_sentinels_], samples,
+                                                          lag = lag)
             } else {
                 maxeig$lowinput_sentinel[i] <- NA
                 sds$lowinput_sentinel <- rep(NA, ncol(X))
@@ -883,7 +676,7 @@ simulation <- function(g
     }
     ## Collect data for analysis, and return the results.
     df <- data.frame(
-        n_lowerstate = n_lowerstate, # [-length(n_lowerstate)]
+        n_lowerstate = n_lowerstate,
         Ds = Ds
     )
     df <- cbind(df, maxeig, maxsd, avgsd, maxac, avgac)

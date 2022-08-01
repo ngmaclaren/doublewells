@@ -5,10 +5,10 @@ library(igraph)
 library(doublewells)
 
                                         # Select and make available the networks on which to simulate.
-                                        # `empiricals` is a list of networks available in "doublewells"
-                                        # originally drawn from the "networkdata" package.
+                                        # `empiricals` is a list of networks available in
+                                        # "doublewells" originally drawn from "networkdata"
 networks <- c(
-    "max_entropy", "me_islands", "pref_attach", "scale_free_2", "LFR",
+    "erdos_renyi", "er_islands", "barabasi_albert", "LFR", "powerlaw", "fitness"
     empiricals
 )
 data(list = networks)
@@ -19,7 +19,7 @@ if(!dir.exists("./data")) dir.create("data")
 if(!dir.exists(outdir)) dir.create(outdir)
 
                                         # How many simulation sets should be run?
-                                        # Each set runs through the basic simulation on 22 networks.
+                                        # Each set runs through the basic simulation on 23 networks.
                                         # With three worker processes, each run takes about an hour
                                         # on a typical office computer.
 nruns <- 50

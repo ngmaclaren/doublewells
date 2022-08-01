@@ -7,7 +7,7 @@ save_plots <- TRUE # FALSE
 run_sims <- FALSE # TRUE
 filename <- "./data/parameter-variation-results.rda"
 
-choices <- c("pref_attach", "dolphins")
+choices <- c("powerlaw", "dolphins")
 
                                         # Typical values commented below
 intensities <- c(.01, .1, .5) # , .05
@@ -85,7 +85,7 @@ if(run_sims) {
 palette("R4")
 
 ## Loop through all the data frames, producing one plot, code below, for each one
-nodesets <- c("all", "lower", "sentinel", "upper", "lowrank", "antisentinel", "altsentinel")
+nodesets <- c("all", "lower", "sentinel", "upper", "lowrank", "random", "largecorr", "largesd")
 signals <- c("maxeig", "maxsd", "avgsd", "maxac", "avgac")
 pch <- colors <- 1:length(nodesets)
 pt.lwd <- 3
@@ -111,14 +111,14 @@ for(i in 1:n.param) {
         mtext(LETTERS[j], font = 2, line = -1.4, adj = -0.06, cex = 1.75)
         axis(side = 2, at = 5:1, labels = yticklabels, tick = FALSE, las = 1,
              cex.lab = 1.75, cex.axis = 1.75)
-        text(x = -1, y = c(5.25, 4.75), labels = c("BA", "Dolphins"), adj = c(0, .5),
-             col = "black", font = 3, cex = 1.5)
+        text(x = -1, y = c(5.25, 4.75), labels = c("Power-Law Network", "Dolphin Network"),
+             adj = c(0, .5), col = "black", font = 3, cex = 1.5)
         segments(y0 = 1:4 + .5, x0 = -1, x1 = 1, lty = 1, lwd = .5, col = "gray")
         segments(x0 = c(-.5, 0, .5), y0 = .5, y1 = length(signals) + .5,
                  lty = 2, lwd = .5, col = "gray")
         for(k in 1:length(dl)) {
             df <- dl[[k]]
-            rdf <- df[, -c(grep("revdir", colnames(df)))]
+            rdf <- df[, -c(grep("lowinput", colnames(df)))]
             dat <- as.data.frame(Kendall_correlations(rdf)$means)
             dat$fullname <- rownames(dat)
             dat <- cbind(dat, do.call(rbind, strsplit(dat$fullname, "_")))
@@ -135,7 +135,7 @@ for(i in 1:n.param) {
         if(j == length.each) {
             legend("bottomleft", cex = 1.5, #inset = c(-0.01, 0),
                    legend = c("All", "Lower State", "High Input",
-                              "Upper State", "Lower Half", "Random", "Large Corr."),
+                              "Upper State", "Lower Half", "Random", "Large Corr.", "Large SD"),
                    pch = pch, col = colors, pt.cex = pt.cex*.75, pt.lwd = pt.lwd*.75,
                    bty = "n")
         }

@@ -6,7 +6,6 @@ library(igraph)
                                         # that package doesn't need to be called directly for this
                                         # code to run. poweRlaw is also a dependency (see the
                                         # `sample_powerlaw` function.
-##library(networkdata) 
 
 ## NB: netsci and others have weights, but downstream analysis will ignore the weights.
 ## Other networks in this list are also formed from data that originally could be considered weighted,
@@ -15,11 +14,12 @@ library(igraph)
                                         # For reproducibility
 set.seed(123)
                                         # Should files be saved?
-save_files <- TRUE # FALSE
+save_files <- FALSE # TRUE
                                         # Should the networks be inspected?
 check_networks <- FALSE # TRUE
 
-## Testing and Collection Functions
+## Additional Functions
+
 get_gcc <- function(g) {
     "Return the largest connected component of a graph."
     require(igraph)
@@ -48,19 +48,35 @@ sample_powerlaw <- function(N, alpha = 2, kmin = 1, max.iter = 10) {
     
     test <- FALSE
     iter <- 1
-
+                                        # Continue loop while `test` is false.
+                                        # Stopping criteria are either (a) a usable network is
+                                        # generated or (b) `max.iter` is reached.
     while(!test) {
+                                        # Generate a vector of integers from a discrete power-law
+                                        # distribution.
         k <- rpldis(n = N, xmin = kmin, alpha = alpha)
+                                        # Test for usable network. Return network if successful,
+                                        # otherwise continue (to try again) if max.iter is not reached.
         if(max(k) < N) {
+                                        # Taking advantage of R's lazy (flexible) typing, assign to
+                                        # `test` either (a) a successfully generated network of class
+                                        # `igraph` or (b) the Boolean value FALSE. The former will
+                                        # stop the loop, the latter will keep it going unless max.iter
+                                        # is reached.
             test <- tryCatch(
                 sample_degseq(
                     k,
+                                        # This algorithm, if successful, will generate a connected,
+                                        # unweighted, simple graph with the expected degree sequence.
+                                        # Additionally, it is expected to sample uniformly at random
+                                        # from the ensemble specified by the degree sequence.
                     method = "vl",
-                ),
+                    ),
+                                        # Return FALSE if `sample_degseq` failed.
                 error = function(cond) return(FALSE)
             )
         }
-
+                                        # Stopping criteria.
         if(is.igraph(test)) {
             g <- test
             test <- TRUE
@@ -78,11 +94,12 @@ sample_powerlaw <- function(N, alpha = 2, kmin = 1, max.iter = 10) {
 
                                         # Where should files be saved?
 fileloc <- "./doublewells/data/"
-                                        # Generate (or load) the model networks in this analysis.
+                                        # Generate (or load, for LFR) the model networks in this
+                                        # analysis.
 model_networks <- c("erdos_renyi", "er_islands", "barabasi_albert", "LFR", "powerlaw", "fitness")
                                         # Some parameters for the Erdos-Renyi family networks
 nnodes <- 100; cprob <- 0.05; nislands <- 5; nbridges <- 1
-                                        # The fundamental Erdos-Renyi model
+                                        # The basic Erdos-Renyi model, using connection probability
 erdos_renyi <- convert(
     sample_gnp(nnodes, cprob)
 )
@@ -95,7 +112,7 @@ er_islands <- convert(
         n.inter = nbridges
     )
 )
-                                        # A fundamental Barabasi-Albert model
+                                        # A basic Barabasi-Albert model with m = 2
 barabasi_albert <- convert(
     sample_pa(nnodes, directed = FALSE, m = 2, start.graph = make_full_graph(2))
 )

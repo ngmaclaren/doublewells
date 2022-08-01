@@ -8,7 +8,7 @@ library(doublewells)
 outfile_lower <- "./data/examples-lower.rda"
 outfile_upper <- "./data/examples-upper.rda"
 
-choices <- c("pref_attach", "dolphins")
+choices <- c("powerlaw", "dolphins")
 
 data(list = choices)
 set.seed(123)
