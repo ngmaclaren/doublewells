@@ -9,17 +9,16 @@ library(doublewells)
 
                                         # Should the output be saved?
 save_results <- FALSE # TRUE
-save_plots <- FALSE # TRUE
+save_plots <- TRUE # FALSE
 
                                         # Which networks should be analyzed?
                                         # This is the same list as that in network-variation-sims.R
                                         # `empiricals` is a vector of empirical networks stored as
                                         # part of this package, retrieved from the "networkdata" pkg.
 networks <- c(
-    "max_entropy", "me_islands", "pref_attach", "scale_free_2", "LFR",
+    "erdos_renyi", "er_islands", "barabasi_albert", "LFR", "powerlaw", "fitness",
     empiricals
 )
-
                                         # Collect a vector of file names to load...
 dataloc <- "./data/sims/"
 datafiles <- paste0(dataloc, list.files(dataloc))
@@ -30,31 +29,49 @@ dls <- gsub("-", "_", list.files(dataloc))
 dls <- gsub(".rda", "", dls)
                                         # and store the sim results in a list.
 sim_results <- lapply(dls, get)
+for(i in 1:length(sim_results)) {
+    for(j in 1:length(networks)) {
+        sim_results[[i]][[j]]$results <- as.numeric(sim_results[[i]][[j]]$results)
+    }
+}
 
                                         # Monday, July 18, 2022
                                         # Choosing only those networks with more than 1 transition
-check_transitions <- function(result, result_names = networks) {
-    transitions <- lapply(result, function(df) table(df$n_lowerstate))
-    names(transitions) <- result_names
-    tr <- transitions[order(names(transitions))]
-    ntr <- lapply(tr, function(x) x[which(x >= 15)])
-    lengths(ntr)
-}
+## check_transitions <- function(result, result_names = networks) {
+##     ## old version
+##     transitions <- lapply(result, function(df) table(df$n_lowerstate))
+##     names(transitions) <- result_names
+##     tr <- transitions[order(names(transitions))]
+##     ntr <- lapply(tr, function(x) x[which(x >= 15)])
+##     lengths(ntr)
+## }
 
-## level 1 is run
-## level 2 is network
-## level 3 is [1]: df [2]: sentinel history
-collect_dfs <- function(run_results, ...) {
-    lapply(run_results, function(dl) dl[[1]])
-}
+for(i in 1:length(sim_results)) names(sim_results[[i]]) <- networks
+sim_dfs <- unlist(sim_results, recursive = FALSE)
+for(df in sim_dfs) df$results <- as.numeric(df$results)
 
-sim_dfs <- lapply(sim_results, collect_dfs)
-count_transitions <- lapply(sim_dfs, check_transitions)
-transitions <- as.data.frame(do.call(rbind, count_transitions))
-colnames(transitions) <- names(count_transitions[[1]])
-mins <- apply(transitions, 2, min)
-reduced_transitions <- transitions[, which(mins >= 2)]
-selected_networks <- colnames(reduced_transitions)
+transitions <- lapply(sim_dfs, function(df) table(df$n_lowerstate))
+tr <- transitions[order(names(transitions))]
+ntr <- lapply(tr, function(x) x[which(x >= 15)])
+lntr <- lengths(ntr)
+lntrdf <- data.frame(network = names(lntr), tr = lntr)
+count_transitions <- aggregate(tr ~ network, data = lntrdf, FUN = min)
+selected_networks <- count_transitions$network[which(count_transitions$tr > 1)]
+
+## level 1 is run, and is a list of lists
+## level 2 is network, and is a list of data frames
+#### OLD: level 3 is [1]: df [2]: sentinel history
+## collect_dfs <- function(run_results, ...) {
+##     lapply(run_results, function(dl) dl[[1]])
+## }
+
+## ##sim_dfs <- lapply(sim_results, collect_dfs)
+## count_transitions <- lapply(sim_dfs, check_transitions)
+## transitions <- as.data.frame(do.call(rbind, count_transitions))
+## colnames(transitions) <- names(count_transitions[[1]])
+## mins <- apply(transitions, 2, min)
+## reduced_transitions <- transitions[, which(mins >= 2)]
+## selected_networks <- colnames(reduced_transitions)
 
 
                                         # Using parallel processing, calculate Kendall correlations
@@ -68,21 +85,23 @@ corr_results <- clusterApply(
     cl = threads, x = sim_results,
     fun =  function(results) {
         lapply(results, function(x) {
-            cr <- doublewells::Kendall_correlations(x[[1]])$means
+            cr <- doublewells::Kendall_correlations(x)$means # [[1]]
         })
     }
 )
 stopCluster(threads)
-for(i in 1:length(corr_results)) {
-    for(j in 1:length(corr_results[[1]])) {
-        corr_results[[i]][[j]]["run", 1] <- i
-    }
-}
+## for(i in 1:length(corr_results)) {
+##     for(j in 1:length(networks)) {#(corr_results[[1]])) {
+##         ##corr_results[[i]][[j]]["run", 1] <- i
+##         ##corr_results[[i]][[j]] <- rbind(corr_results[[i]][[j]], c(i))
+##     }
+## }
 
                                         # Store correlation results as a list of data frames
 df_list <- lapply(corr_results, function(x) as.data.frame(t(do.call(cbind, x))))
                                         # Store the names of the early warning indicator variables
-varcols <- colnames(df_list[[1]])[-which(colnames(df_list[[1]]) %in% c("run", "network"))]
+##varcols <- colnames(df_list[[1]])[-which(colnames(df_list[[1]]) %in% c("run", "network"))]
+varcols <- colnames(df_list[[1]])[-which(colnames(df_list[[1]]) %in% c("results"))]
                                         # And update the data frames with metadata.
 for(i in 1:length(df_list)) {
     df_list[[i]]$network <- networks

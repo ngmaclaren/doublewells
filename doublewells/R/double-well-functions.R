@@ -3,7 +3,7 @@
                                         # A vector of names of empirical data sets stored in this
                                         # package.
 empiricals <- c(
-    "karate", "pira", "netsci", "jazz","drugusers", "hall", "highschoolboys", "surfersb",
+    "karate", "pira", "netsci", "jazz","drugusers", "hall", "highschoolboys", "surfers",
     "weaverbirds", "dolphins", "nestbox", "lizards", "bats", "elephantseals", "tortoises",
     "housefinches", "voles"
 )

@@ -8,7 +8,7 @@ library(doublewells)
                                         # `empiricals` is a list of networks available in
                                         # "doublewells" originally drawn from "networkdata"
 networks <- c(
-    "erdos_renyi", "er_islands", "barabasi_albert", "LFR", "powerlaw", "fitness"
+    "erdos_renyi", "er_islands", "barabasi_albert", "LFR", "powerlaw", "fitness",
     empiricals
 )
 data(list = networks)
@@ -44,7 +44,7 @@ run_sim <- function(network, seed) {
     data(list = c(network))
     g <- get(network)
                                         # And run the simulation with default settings.
-    simulation(g, check_alts = TRUE)
+    simulation(g)#, check_alts = TRUE)
 }
 
                                         # Main loop
