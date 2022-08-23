@@ -8,7 +8,7 @@ library(doublewells)
 ### This file produces the various examples figures
 
 ## options
-save_plots <- TRUE # FALSE
+save_plots <- FALSE # TRUE
 palette("R4")
 
 load("./data/examples-lower.rda")
@@ -84,7 +84,7 @@ xlim <- c(-1, 1)
 plot(NULL, xlab = expression(italic(tau)), ylab = "", yaxt = "n", ylim = ylim, xlim = xlim,
      bty = "n", cex.lab = 2.5, cex.axis = 2.5)#cex.lab = 1.75, cex.axis = 1.75)
 axis(side = 2, at = 5:1, labels = yticklabels, tick = FALSE, las = 1, cex.lab = 1.75, cex.axis = 1.75)
-text(x = -1, y = c(5.25, 4.75), labels = c("Power-Law Network", "Dolphin Network"),
+text(x = -1, y = c(5.25, 4.75), labels = c("Power-Law network", "Dolphin network"),
      adj = c(0, .5), col = "black", font = 3, cex = 1.5)
 legend("bottomright", cex = 1.25, inset = c(-.1, 0),#c(-.32, 0),
        legend = c("All", "Lower State", "High Input",
@@ -107,6 +107,7 @@ for(i in 1:length(examples_lower)) {
     dat$signal_ <- as.numeric(dat$signal) + adjust[i]
     dat$set_ <- as.numeric(dat$set)
     points(signal_ ~ tau, data = dat, col = dat$set_, pch = dat$set_, lwd = pt.lwd, cex = pt.cex)
+    print(summary(dat$tau[dat$set %in% c("all", "lower", "sentinel")]))
 }
 if(save_plots) dev.off()
 
@@ -130,7 +131,7 @@ xlim <- c(-1, 1)
 plot(NULL, xlab = expression(italic(tau)), ylab = "", yaxt = "n", ylim = ylim, xlim = xlim,
      bty = "n", cex.lab = 2.5, cex.axis = 2.5)
 axis(side = 2, at = 5:1, labels = yticklabels, tick = FALSE, las = 1, cex.lab = 1.75, cex.axis = 1.75)
-text(x = .85, y = c(5.25, 4.75), labels = c("Power-Law", "Dolphin"),
+text(x = .85, y = c(5.25, 4.75), labels = c("Power-Law network", "Dolphin network"),
      adj = c(0, .5), col = "black", font = 3, cex = 1.5)
 legend("bottomright", cex = 1.25, inset = c(-.12, 0),# c(-.32, 0),
        legend = c("All", "Lower State", "High Input", "Upper State", "Low Input", "Random"),

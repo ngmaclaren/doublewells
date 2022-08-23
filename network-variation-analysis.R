@@ -1,6 +1,4 @@
-## Monday, July 18, 2022: DO NOT RUN. Needs to be updated based on final simulation runs.
-
-## Code by Neil MacLaren, 3/24/2022
+## Code by Neil MacLaren, 3/24/2022, updated 8/3/2022
 
 library(parallel)
 library(nlme)
@@ -8,8 +6,8 @@ library(igraph)
 library(doublewells)
 
                                         # Should the output be saved?
-save_results <- FALSE # TRUE
-save_plots <- TRUE # FALSE
+save_results <- TRUE # FALSE
+save_plots <- FALSE # TRUE
 
                                         # Which networks should be analyzed?
                                         # This is the same list as that in network-variation-sims.R
@@ -34,45 +32,22 @@ for(i in 1:length(sim_results)) {
         sim_results[[i]][[j]]$results <- as.numeric(sim_results[[i]][[j]]$results)
     }
 }
-
-                                        # Monday, July 18, 2022
-                                        # Choosing only those networks with more than 1 transition
-## check_transitions <- function(result, result_names = networks) {
-##     ## old version
-##     transitions <- lapply(result, function(df) table(df$n_lowerstate))
-##     names(transitions) <- result_names
-##     tr <- transitions[order(names(transitions))]
-##     ntr <- lapply(tr, function(x) x[which(x >= 15)])
-##     lengths(ntr)
-## }
-
+                                        # Label each network data frame in the list
 for(i in 1:length(sim_results)) names(sim_results[[i]]) <- networks
+                                        # retrieve just the data frames
 sim_dfs <- unlist(sim_results, recursive = FALSE)
+                                        # Correct data type
 for(df in sim_dfs) df$results <- as.numeric(df$results)
-
+                                        # Count the number of stable ranges
 transitions <- lapply(sim_dfs, function(df) table(df$n_lowerstate))
 tr <- transitions[order(names(transitions))]
 ntr <- lapply(tr, function(x) x[which(x >= 15)])
 lntr <- lengths(ntr)
 lntrdf <- data.frame(network = names(lntr), tr = lntr)
 count_transitions <- aggregate(tr ~ network, data = lntrdf, FUN = min)
+                                        # Store a vector of network names that have more than one
+                                        # stable range.
 selected_networks <- count_transitions$network[which(count_transitions$tr > 1)]
-
-## level 1 is run, and is a list of lists
-## level 2 is network, and is a list of data frames
-#### OLD: level 3 is [1]: df [2]: sentinel history
-## collect_dfs <- function(run_results, ...) {
-##     lapply(run_results, function(dl) dl[[1]])
-## }
-
-## ##sim_dfs <- lapply(sim_results, collect_dfs)
-## count_transitions <- lapply(sim_dfs, check_transitions)
-## transitions <- as.data.frame(do.call(rbind, count_transitions))
-## colnames(transitions) <- names(count_transitions[[1]])
-## mins <- apply(transitions, 2, min)
-## reduced_transitions <- transitions[, which(mins >= 2)]
-## selected_networks <- colnames(reduced_transitions)
-
 
                                         # Using parallel processing, calculate Kendall correlations
                                         # for all simulations. The Kendall_correlations() function is
@@ -85,27 +60,19 @@ corr_results <- clusterApply(
     cl = threads, x = sim_results,
     fun =  function(results) {
         lapply(results, function(x) {
-            cr <- doublewells::Kendall_correlations(x)$means # [[1]]
+            cr <- doublewells::Kendall_correlations(x)$means
         })
     }
 )
 stopCluster(threads)
-## for(i in 1:length(corr_results)) {
-##     for(j in 1:length(networks)) {#(corr_results[[1]])) {
-##         ##corr_results[[i]][[j]]["run", 1] <- i
-##         ##corr_results[[i]][[j]] <- rbind(corr_results[[i]][[j]], c(i))
-##     }
-## }
 
                                         # Store correlation results as a list of data frames
 df_list <- lapply(corr_results, function(x) as.data.frame(t(do.call(cbind, x))))
                                         # Store the names of the early warning indicator variables
-##varcols <- colnames(df_list[[1]])[-which(colnames(df_list[[1]]) %in% c("run", "network"))]
 varcols <- colnames(df_list[[1]])[-which(colnames(df_list[[1]]) %in% c("results"))]
                                         # And update the data frames with metadata.
 for(i in 1:length(df_list)) {
     df_list[[i]]$network <- networks
-    ##df_list[[i]]$run <- i
 }
                                         # Reshape for statistical analysis.
                                         # Previous output was a matrix/data frame of correlation
@@ -114,7 +81,6 @@ for(i in 1:length(df_list)) {
                                         # as well as the network label.
 rdf_list <- lapply(df_list, reshape, varying = varcols, v.names = "tau",
                    timevar = "ewi_", idvar = "network", times = varcols,
-                   #new.row.names = 1:10000,
                    direction = "long")
                                         # This loop splits the `varcols` variable names for analysis
                                         # convenience. Specifically, it separates the variables into
@@ -129,7 +95,6 @@ for(i in 1:length(rdf_list)) {
     rdf$nodeset <- factor(rdf$nodeset, levels = c("all", "lower", "sentinel"),
                           ordered = FALSE)
                                         # Metadata is also added. 
-    ##rdf$run <- i
     rdf$rownames <- rownames(rdf)
     newcols <- strsplit(rdf$rownames, split = ".", fixed = TRUE)
     newcols <- do.call(rbind, newcols)
@@ -141,7 +106,6 @@ for(i in 1:length(rdf_list)) {
                                         # All the data frames are combined into one for analysis. 
 rdf <- do.call(rbind, rdf_list)
 rownames(rdf) <- 1:length(rownames(rdf))
-                                        # Monday, July 18, 2022
                                         # Filter on `selected_networks
 rdf <- rdf[rdf$network %in% selected_networks, ]
 
@@ -261,11 +225,6 @@ axis(side = 2, tick = FALSE, labels = yticklabels, at = max(plotvals$signal_):1,
 ##ypos <- 2 + c((1/3), 0, -(1/3))
 if(plot_errorbars) {
     points(adjust ~ est, data = plotvals, pch = pchs, lwd = lwd, col = plotvals$set_, cex = pchcex)
-    ## segments(x0 = plotvals$est, y0 = plotvals$signal_ - adjust, y1 = plotvals$signal_ + adjust,
-    ##          lwd = lwd, lty = lty, col = plotvals$set_)
-    ## rect(xleft = plotvals$lower, xright = plotvals$upper,
-    ##      ybottom = plotvals$signal_ - adjust, ytop = plotvals$signal_ + adjust,
-    ##      density = NULL, col = NA, border = plotvals$set_, lty = lty, lwd = lwd)
     segments(x0 = plotvals$lower, x1 = plotvals$upper, y0 = plotvals$adjust,
              lty = 1, lwd = lwd, col = plotvals$set_)
     legend("topleft", legend = legendlabels, col = 1:3, bty = "n", lwd = lwd, lty = lty, pch = pchs)
@@ -276,87 +235,3 @@ if(plot_errorbars) {
        cex = 1.25)
 }
 if(save_plots) dev.off()
-
-##abline(h = 1.5, col = "gray", lwd = .5, lty = 1)
-## ypos <- 1 + c((1/3), 0, -(1/3))
-## points(plotvals[[2]]$ests, ypos, pch = pchs, col = colors, cex = pchcex)
-## if(plot_errorbars) {
-##     segments(x0 = plotvals[[2]]$lowers, x1 = plotvals[[2]]$uppers, y0 = ypos,
-##              lty = 1, lwd = 2, col = colors)
-## }
-## legend("bottomleft", legend = legendlabels,
-##        col = 1:length(legendlabels), bty = "n", pch = pchs)#, lty = 1, lwd = 1)#, pt.cex = 2)
-
-
-
-## nodesets <- c("all", "lower", "sentinel")
-
-
-
-
-## #### Do not run
-## ### Code to observe variation due to network
-## hist(rdf$tau)
-## summary(rdf$tau)
-
-## dev.new(height = 7, width = 14)
-## boxplot(tau ~ as.factor(network), data = rdf)
-
-## plotdf <- subset(rdf, ewi == "avgac")
-## plotdf$netno <- as.integer(factor(plotdf$network))
-## plotdf$adjust <- as.numeric(factor(plotdf$nodeset))/3 - (1/3)
-
-## svg("./img/network-var-vis-test.svg", height = 7, width = 14)
-## palette("Polychrome 36")
-## plot(NULL,
-##      xlim = range(plotdf$netno), ylim = range(plotdf$tau),
-##      xlab = "Network x NodeSet", ylab = "tau")
-## points(x = plotdf$netno + plotdf$adjust,
-##        y = plotdf$tau,
-##        pch = plotdf$netno,
-##        col = plotdf$netno)
-## dev.off()
-
-
-
-## ## Checking intuition on number of transitions
-## dl <- sim_results[[1]]
-## dfs <- vector("list", 22)
-## for(i in 1:length(dl)) dfs[[i]] <- dl[[i]][[1]]
-## transitions <- lapply(dfs, function(df) table(df$n_lowerstate))
-## names(transitions) <- networks
-## tr <- transitions[order(names(transitions))]
-## lapply(tr, function(x) x[which(x >= 15)]) # yes, matches.
-## ## Try a different sim run
-## dl <- sim_results[[7]]
-## dfs <- vector("list", 22)
-## for(i in 1:length(dl)) dfs[[i]] <- dl[[i]][[1]]
-## transitions <- lapply(dfs, function(df) table(df$n_lowerstate))
-## names(transitions) <- networks
-## tr <- transitions[order(names(transitions))]
-## lapply(tr, function(x) x[which(x >= 15)])
-
-## check_transitions <- function(result, result_names = networks) {
-##     transitions <- lapply(result, function(df) table(df$n_lowerstate))
-##     names(transitions) <- result_names
-##     tr <- transitions[order(names(transitions))]
-##     ntr <- lapply(tr, function(x) x[which(x >= 15)])
-##     lengths(ntr)
-## }
-
-## ## level 1 is run
-## ## level 2 is network
-## ## level 3 is [1]: df [2]: sentinel history
-## collect_dfs <- function(run_results, ...) {
-##     lapply(run_results, function(dl) dl[[1]])
-## }
-
-## test1 <- lapply(sim_results, collect_dfs)
-## test2 <- lapply(test1, check_transitions)
-## test3 <- as.data.frame(do.call(rbind, test2))
-## colnames(test3) <- names(test2[[1]])
-## lapply(test3, summary)
-## mins <- apply(test3, 2, min)
-## test4 <- test3[, which(mins >= 2)]
-
-## test4 <- subset(t(test3), . >= 2)
