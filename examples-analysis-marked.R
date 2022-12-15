@@ -1,5 +1,6 @@
 ## Code by Neil MacLaren 5/31/2022
-## R1 updates 12/14/2022
+
+### Update this file to produce the new early warning signals
 
 library(igraph)
 library(doublewells)
@@ -10,15 +11,15 @@ library(doublewells)
 save_plots <- FALSE # TRUE
 palette("R4")
 
-load("./data/examples-lower-r1.rda")
-load("./data/examples-upper-r1.rda")
+load("./data/examples-lower.rda")
+load("./data/examples-upper.rda")
 
 ### Figure 1. use examples_lower
 ### x = D, y1 = prop lower state, y2 = avg ac
 nodesets <- c("all", "lower", "sentinel")
 signals <- c("avgac")
 columns <- paste(signals, nodesets, sep = "_")
-d_imgfile <- "./img/examples-multistage-transition.pdf"
+d_imgfile <- "./img/examples-multistage-transition-marked.pdf"
 wd <- 9
 ht <- 8
 colors <- 1:length(nodesets)
@@ -31,7 +32,7 @@ if(save_plots) {
 } else dev.new(width = wd, height = ht)
 par(mfrow = c(2, 1), mar = c(3.5, 4, 1, 4)+.4, xpd = TRUE)
 for(i in 1:length(examples_lower)) {
-    df <- examples_lower[[i]]$df
+    df <- examples_lower[[i]]
     df$p_lowerstate <- round((df$n_lowerstate/max(df$n_lowerstate))*100)
     df$p_upperstate <- round( (1 - (df$n_lowerstate/max(df$n_lowerstate)))*100 )
     plot(df$Ds, df$p_upperstate,#df$p_lowerstate,
@@ -60,6 +61,7 @@ for(i in 1:length(examples_lower)) {
             xlab = "", ylab = "")
     axis(4, at = pretty(c(0, 1)), cex.axis = 1.75)
     mtext("Average Autocorrelation",side = 4, cex = 1.75, font = 1, line = 3)
+    if(i == 1) abline(v = c(0.325, 0.550, 0.945), lwd = 2, col = 4) ##################
 }
 if(save_plots) dev.off()
 
@@ -93,7 +95,7 @@ legend("bottomright", cex = 1.25, inset = c(-.1, 0),#c(-.32, 0),
 segments(y0 = 1:4 + .5, x0 = -1, x1 = 1, lty = 1, lwd = .5, col = "gray")
 segments(x0 = c(-.5, 0, .5), y0 = .5, y1 = length(signals) + .5, lty = 2, lwd = .5, col = "gray")
 for(i in 1:length(examples_lower)) {
-    df <- examples_lower[[i]]$df
+    df <- examples_lower[[i]]
     rdf <- df[, -c(grep("lowinput", colnames(df)))]
     dat <- as.data.frame(Kendall_correlations(rdf)$means)
     dat$fullname <- rownames(dat)
@@ -139,7 +141,7 @@ legend("bottomright", cex = 1.25, inset = c(-.12, 0),# c(-.32, 0),
 segments(y0 = 1:4 + .5, x0 = -1, x1 = 1, lty = 1, lwd = .5, col = "gray")
 segments(x0 = c(-.5, 0, .5), y0 = .5, y1 = length(signals) + .5, lty = 2, lwd = .5, col = "gray")
 for(i in 1:length(examples_upper)) {
-    df <- examples_upper[[i]]$df
+    df <- examples_upper[[i]]
     rdf <- df[, -c(grep("lowrank", colnames(df))
                  ##, grep("random", colnames(df))
                    )]
@@ -176,7 +178,7 @@ if(save_plots) {
 } else dev.new(width = wd, height = ht)
 par(mfrow = c(2, 1), mar = c(3.5, 4, 1, 4)+.4, xpd = TRUE)
 for(i in 1:length(examples_upper)) {
-    df <- examples_upper[[i]]$df
+    df <- examples_upper[[i]]
     df$p_lowerstate <- round((df$n_lowerstate/max(df$n_lowerstate))*100)
     df$p_upperstate <- round( (1 - (df$n_lowerstate/max(df$n_lowerstate)))*100 )
     plot(df$Ds, df$p_upperstate,#df$p_lowerstate,
@@ -207,84 +209,3 @@ for(i in 1:length(examples_upper)) {
     mtext("Average Autocorrelation",side = 4, cex = 1.75, font = 1, line = 3)
 }
 if(save_plots) dev.off()
-
-## New code below here, Wednesday, December 14, 2022
-
-                                        # How does the τ compare for the different transitions (from
-                                        # stable ranges)?
-df <- examples_lower[[2]]$df
-rdf <- df[, -c(grep("lowinput", colnames(df)))]
-kdat <- Kendall_correlations(rdf)$kendalls[
-                                    , c("avgac_all", "avgac_lower", "avgac_sentinel",
-                                        "n_steps", "n_lowerstate")
-                                  ]
-maxDs <- tapply(rdf$Ds, as.factor(rdf$n_lowerstate), max)
-maxDs <- data.frame(
-    n_lowerstate = as.numeric(names(maxDs)),
-    Ds = maxDs
-)
-kdat$Ds <- maxDs$Ds[match(kdat$n_lowerstate, maxDs$n_lowerstate)]
-
-matplot(kdat$Ds, kdat[, c("avgac_all", "avgac_lower", "avgac_sentinel")],
-        xlab = "D", ylab = expression(tau),
-        type = "o", pch = 1:3, lwd = 2, cex = rep(kdat$n_steps/15, each = 3), 
-        xlim = range(kdat$Ds), ylim = c(0.5, 1.0))
-
-plot(NULL, xlab = "D", ylab = expression(tau), xlim = range(kdat$Ds), ylim = c(0.5, 1.0),
-     main = "Power-law")
-plotseries <- function(colname, pch) {
-    points(kdat$Ds, kdat[, colname], pch = pch, lwd = 2, cex = kdat$n_steps/15, col = pch)
-    lines(kdat$Ds, kdat[, colname], lty = pch, lwd = 2, col = pch)
-}
-plotseries("avgac_all", 1)
-plotseries("avgac_lower", 2)
-plotseries("avgac_sentinel", 3)
-
-                                        # What proportion of sentinel nodes transition?
-sents <- examples_lower[[2]]$histories$sentinels
-lss <- examples_lower[[2]]$histories$ls_nodes
-idx <- which(rdf$Ds %in% kdat$Ds)
-
-for(i in idx) {
-    print(paste("D =", rdf[i, "Ds"]))
-    print(paste("Nodes transitioning:", length(lss[[i]]) - length(lss[[i + 1]])))
-    print(paste("# sentinel nodes transitioning:", sum(!(sents[[i]] %in% lss[[i + 1]]))))
-}
-
-                                        # Comparing Large Corr nodes vs. Sentinel nodes
-data(powerlaw)
-data(dolphins)
-pllc <- examples_lower[[1]]$histories$largecorr
-pllc <- lapply(pllc, sort)
-plhi <- examples_lower[[1]]$histories$sentinels
-plhi <- lapply(plhi, sort)
-dlc <- examples_lower[[2]]$histories$largecorr
-dlc <- lapply(dlc, sort)
-dhi <- examples_lower[[2]]$histories$sentinels
-dhi <- lapply(dhi, sort)
-
-                                        # Average Hamming distance over the course of the simulation
-mean(mapply(function(x, y) sum(x != y), pllc, plhi))
-mean(mapply(function(x, y) sum(x != y), dlc, dhi))
-
-                                        # Average degree of the various nodes
-plhi_meandeg <- sapply(plhi, function(x) mean(degree(powerlaw, x)))
-pllc_meandeg <- sapply(pllc, function(x) mean(degree(powerlaw, x)))
-
-dhi_meandeg <- sapply(dhi, function(x) mean(degree(dolphins, x)))
-dlc_meandeg <- sapply(dlc, function(x) mean(degree(dolphins, x)))
-
-plot(
-    plhi_meandeg, pllc_meandeg, type = "p", pch = 1, col = 1, lwd = 2, cex = 2,
-    xlab = "Mean Degree of High Input Nodes",
-    ylab = "Mean Degree of Large Correlation Nodes",
-    xlim = range(unlist(c(plhi_meandeg, dhi_meandeg))),
-    ylim = range(unlist(c(pllc_meandeg, dlc_meandeg))),
-    log = "xy"
-)
-points(dhi_meandeg, dlc_meandeg, pch = 2, col = 2, lwd = 2, cex = 2)
-legend(
-    "topleft", bty = "n",
-    legend = c("Power-law", "Dolphins"),
-    col = c(1, 2), pt.lwd = 2,pch = c(1, 2)# lty = 1
-)

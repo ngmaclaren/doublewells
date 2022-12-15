@@ -1,7 +1,7 @@
 library(igraph)
 library(doublewells)
 
-save_plots <- TRUE # FALSE
+save_plots <- FALSE # TRUE
 ##palette("Okabe-Ito")
 palette("Tableau 10")
 

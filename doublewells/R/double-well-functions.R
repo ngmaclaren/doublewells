@@ -163,10 +163,16 @@ Kendall_correlations <- function(df, constrain = TRUE, cutoff = 15, check_alts =
                                         # stream as these sds are not based on independent
                                         # observations.
     results <- list(
+                                        # Primary information required: the average τ over all
+                                        # transitions.
         means = as.matrix(round(colMeans(kendalls[, columns], na.rm = TRUE), 3)),
         sds = suppressWarnings(# warns when sd == 0
             as.matrix(round(apply(kendalls[, columns], 2, sd, na.rm = TRUE), 3))
-        )
+        ),
+                                        # Stores the whole data frame, including value of τ at each
+                                        # transition and the length of the stable range (in terms of
+                                        # unique values of D)
+        kendalls = kendalls
     )
     return(results)
 }
@@ -175,7 +181,13 @@ Kendall_correlations <- function(df, constrain = TRUE, cutoff = 15, check_alts =
 
 choose_sentinels <- function(g, X, samples, n = 5, state_check = samples[length(samples)],
                              state_cutoff = NULL, upper_state_cutoff = NULL,
-                             from_upper = FALSE, low_input = FALSE) {
+                             from_upper = FALSE, low_input = FALSE#,
+                                        # This argument needs to be a vector of integers specifying
+                                        # which positions of the `samples` vector to use in choosing
+                                        # sentinel nodes; e.g. 1:10. Default is all samples for
+                                        # consistency.
+                             #reduce_samples_to = 1:length(samples)
+                             ) {
     "Choose `n` sentinel nodes in a graph `g` based on the AVERAGE state of the x_i in `X` over the M samples."
                                         # With a data matrix X that contains all the integration
                                         # steps, determine the macro state of each node at the
@@ -197,7 +209,9 @@ choose_sentinels <- function(g, X, samples, n = 5, state_check = samples[length(
                                         # Otherwise, calculate ranks for all available nodes. A
                                         # node's rank is R_i = \sum x_j, where j is a neighbor of i
                                         # and x_j is the mean state of x_j over the M samples.
-        ranks <- sapply(avail, function(v) sum(colMeans(as.matrix(X[samples, neighbors(g, v)]))))
+        ranks <- sapply(avail, function(v) {
+            sum(colMeans(as.matrix(X[samples, neighbors(g, v)]))) # [reduce_samples_to]
+        })
                                         # Make a convenience data frame
         df <- data.frame(avail = as.numeric(avail), ranks)
                                         # Sort the df based on whether low input or high input (the
@@ -363,8 +377,20 @@ simulation <- function(g
                        from_upper = FALSE
                      ,
                        D.stop = NULL
+                                        # Should Aparicio et al.'s ρ be returned instead of the normal
+                                        # output?
                      , 
                        calc_rho = FALSE
+                                        # Should lists of sentinel nodes, lowerstate nodes, etc. be
+                                        # returned in addition to the normal output?
+                     ,
+                       return_histories = FALSE
+                                        # Set this argument to a sequence e.g. 1:10 to take the first
+                                        # 10 positions of the samples vector as the assessment
+                                        # samples, reducing the amount of# information used to select
+                                        # sentinel nodes.
+                     ,
+                       assessment_samples = NULL
                        ) {
     "This function simulates a multi-node double well system over increasing values of the connection strength, D, between nodes. It returns a data frame with the state of the system after each round of integration and the value of each early warning indicator in that iteration. The process takes some time, particularly for larger networks (max attempted has about 375 nodes)."
                                         # Calculate the cutoff value for what constitutes being in
@@ -399,7 +425,15 @@ simulation <- function(g
     sample_spacing <- sample_spacing/dt
                                         # It is easiest to select samples once by "counting
                                         # backwards" from the end of the simulation.
-    samples <- seq(from = T, by = -sample_spacing, length.out = nsamples)
+    samples <- rev(seq(from = T, by = -sample_spacing, length.out = nsamples))
+                                        # Set the reduced sample index to the default value if NULL
+    if(is.null(assessment_samples)) {
+        a_samples <- samples#1:length(samples)
+        e_samples <- samples
+    } else {
+        a_samples <- samples[assessment_samples]
+        e_samples <- samples[-assessment_samples]
+    }
                                         # All x_i are initially set to 1 (lower) or 7 (upper)
     if(from_upper) {
         initialx <- rep(max(r), nnodes)
@@ -415,7 +449,12 @@ simulation <- function(g
     avgsd <- list(all = numeric(), lower = numeric(), sentinel = numeric())
     maxac <- list(all = numeric(), lower = numeric(), sentinel = numeric())
     avgac <- list(all = numeric(), lower = numeric(), sentinel = numeric())
-    sentinel_history <- list() # store these and similar lists for diagnostic purposes
+                                        # store lists of sentinel nodes and which nodes are in the
+                                        # lower state for diagnostic purposes. Marking TRUE for an
+                                        # option is required to return them, as it will change the
+                                        # class of the output.
+    sentinel_history <- list() 
+    nodestate_history <- list()
     if(check_equil) equils <- list()
 
                                         # If checking alternatives
@@ -524,22 +563,28 @@ simulation <- function(g
                                         # neighbors across samples of X.
                                         # These are "High Input" nodes.
         sentinels <- choose_sentinels(
-            g, X, samples, n = n_sentinels, state_check = state_check, from_upper = from_upper,
-            state_cutoff = state_cutoff, upper_state_cutoff = upper_state_cutoff, low_input = FALSE
+            g, X, a_samples,
+            n = n_sentinels, state_check = state_check, from_upper = from_upper,
+            state_cutoff = state_cutoff, upper_state_cutoff = upper_state_cutoff, low_input = FALSE#,
+            #reduce_samples_to = reduce_samples_to
         )
                                         # Collect additional node vectors if checking alternatives
         if(check_alts) {
-            lowrank <- choose_lowrank(g, X, samples, cutoff = state_cutoff, state_check = state_check)
+            lowrank <- choose_lowrank(g, X, a_samples,
+                                      cutoff = state_cutoff, state_check = state_check)
             random <- choose_random(g, sentinels, n_sentinels)
             if(!from_upper) {
-                largecorrs <- choose_largecorr(X, samples, from_upper = from_upper,
+                largecorrs <- choose_largecorr(X, a_samples,
+                                               from_upper = from_upper,
                                                lower = in_lowerstate, upper = in_upperstate)
-                largesds <- choose_largesd(X, samples, from_upper = from_upper,
+                largesds <- choose_largesd(X, a_samples,
+                                           from_upper = from_upper,
                                            lower = in_lowerstate, upper = in_upperstate)
             }
                                         # These are "Low Input" nodes
             lowinput_sentinels <- choose_sentinels(
-                g, X, samples, n = n_sentinels, state_check = state_check, from_upper = from_upper,
+                g, X, a_samples,
+                n = n_sentinels, state_check = state_check, from_upper = from_upper,
                 state_cutoff = state_cutoff, upper_state_cutoff = upper_state_cutoff, low_input = TRUE
             )
         }
@@ -549,14 +594,14 @@ simulation <- function(g
                                         # aggregated
         sds <- list(); acs <- list()
                                         # All
-        maxeig$all[i] <- sampled_eigenmethod(X, samples = samples, nodes = V(g))
+        maxeig$all[i] <- sampled_eigenmethod(X, samples = samples, nodes = V(g)) #always use all info
         sds$all <- sampled_sdmethod(X, samples)
         acs$all <- sampled_acmethod(X, samples, lag = lag)
                                         # Lower State
         if(length(in_lowerstate) > 0) {
-            maxeig$lower[i] <- sampled_eigenmethod(X, samples = samples, nodes = in_lowerstate)
-            sds$lower <- sampled_sdmethod(X[, in_lowerstate], samples)
-            acs$lower <- sampled_acmethod(X[, in_lowerstate], samples, lag = lag)
+            maxeig$lower[i] <- sampled_eigenmethod(X, samples = e_samples, nodes = in_lowerstate)
+            sds$lower <- sampled_sdmethod(X[, in_lowerstate], e_samples)
+            acs$lower <- sampled_acmethod(X[, in_lowerstate], e_samples, lag = lag)
         } else {
             maxeig$lower[i] <- NA
             sds$lower <- rep(NA, ncol(X))
@@ -565,9 +610,9 @@ simulation <- function(g
                                         # Sentinels
         sentinels_ <- na.omit(sentinels)
         if(length(sentinels_) > 0) {
-            maxeig$sentinel[i] <- sampled_eigenmethod(X, samples = samples, nodes = sentinels_)
-            sds$sentinel <- sampled_sdmethod(X[, sentinels_], samples)
-            acs$sentinel <- sampled_acmethod(X[, sentinels_], samples, lag = lag)
+            maxeig$sentinel[i] <- sampled_eigenmethod(X, samples = e_samples, nodes = sentinels_)
+            sds$sentinel <- sampled_sdmethod(X[, sentinels_], e_samples)
+            acs$sentinel <- sampled_acmethod(X[, sentinels_], e_samples, lag = lag)
         } else {
             maxeig$sentinel[i] <- NA
             sds$sentinel <- rep(NA, ncol(X))
@@ -577,9 +622,9 @@ simulation <- function(g
         if(check_alts) {
                                         # Upper State
             if(length(in_upperstate) > 0) {
-                maxeig$upper[i] <- sampled_eigenmethod(X, samples = samples, nodes = in_upperstate)
-                sds$upper <- sampled_sdmethod(X[, in_upperstate], samples)
-                acs$upper <- sampled_acmethod(X[, in_upperstate], samples, lag = lag)
+                maxeig$upper[i] <- sampled_eigenmethod(X, samples = e_samples, nodes = in_upperstate)
+                sds$upper <- sampled_sdmethod(X[, in_upperstate], e_samples)
+                acs$upper <- sampled_acmethod(X[, in_upperstate], e_samples, lag = lag)
             } else {
                 maxeig$upper[i] <- NA
                 sds$upper <- rep(NA, ncol(X))
@@ -587,37 +632,37 @@ simulation <- function(g
             }
                                         # Low Rank
             if(length(lowrank) > 0) {
-                maxeig$lowrank[i] <- sampled_eigenmethod(X, samples = samples, nodes = lowrank)
-                sds$lowrank <- sampled_sdmethod(X[, lowrank], samples)
-                acs$lowrank <- sampled_acmethod(X[, lowrank], samples, lag = lag)
+                maxeig$lowrank[i] <- sampled_eigenmethod(X, samples = e_samples, nodes = lowrank)
+                sds$lowrank <- sampled_sdmethod(X[, lowrank], e_samples)
+                acs$lowrank <- sampled_acmethod(X[, lowrank], e_samples, lag = lag)
             } else {
                 maxeig$lowrank[i] <- NA
                 sds$lowrank <- rep(NA, ncol(X))
                 acs$lowrank <- rep(NA, ncol(X))
             }
                                         # Anti-Sentinel (Random)
-            maxeig$random[i] <- sampled_eigenmethod(X, samples = samples, nodes = random)
-            sds$random <- sampled_sdmethod(X[, random], samples)
-            acs$random <- sampled_acmethod(X[, random], samples, lag = lag)
+            maxeig$random[i] <- sampled_eigenmethod(X, samples = e_samples, nodes = random)
+            sds$random <- sampled_sdmethod(X[, random], e_samples)
+            acs$random <- sampled_acmethod(X[, random], e_samples, lag = lag)
                                         # Large Correlation Sentinels
             if(!from_upper) {
-                maxeig$largecorr[i] <- sampled_eigenmethod(X, samples = samples, nodes = largecorrs)
-                sds$largecorr <- sampled_sdmethod(X[, largecorrs], samples)
-                acs$largecorr <- sampled_acmethod(X[, largecorrs], samples, lag = lag)
+                maxeig$largecorr[i] <- sampled_eigenmethod(X, samples = e_samples, nodes = largecorrs)
+                sds$largecorr <- sampled_sdmethod(X[, largecorrs], e_samples)
+                acs$largecorr <- sampled_acmethod(X[, largecorrs], e_samples, lag = lag)
             }
                                         # Large Standard Deviation Sentinels
             if(!from_upper) {
-                maxeig$largesd[i] <- sampled_eigenmethod(X, samples = samples, nodes = largesds)
-                sds$largesd <- sampled_sdmethod(X[, largesds], samples)
-                acs$largesd <- sampled_acmethod(X[, largesds], samples, lag = lag)
+                maxeig$largesd[i] <- sampled_eigenmethod(X, samples = e_samples, nodes = largesds)
+                sds$largesd <- sampled_sdmethod(X[, largesds], e_samples)
+                acs$largesd <- sampled_acmethod(X[, largesds], e_samples, lag = lag)
             }
                                         # Reverse Direction Sentinels
             lowinput_sentinels_ <- na.omit(lowinput_sentinels)
             if(length(lowinput_sentinels_) > 0) {
-                maxeig$lowinput_sentinel[i] <- sampled_eigenmethod(X, samples = samples,
+                maxeig$lowinput_sentinel[i] <- sampled_eigenmethod(X, samples = e_samples,
                                                                    nodes = lowinput_sentinels_)
-                sds$lowinput_sentinel <- sampled_sdmethod(X[, lowinput_sentinels_], samples)
-                acs$lowinput_sentinel <- sampled_acmethod(X[, lowinput_sentinels_], samples,
+                sds$lowinput_sentinel <- sampled_sdmethod(X[, lowinput_sentinels_], e_samples)
+                acs$lowinput_sentinel <- sampled_acmethod(X[, lowinput_sentinels_], e_samples,
                                                           lag = lag)
             } else {
                 maxeig$lowinput_sentinel[i] <- NA
@@ -637,10 +682,11 @@ simulation <- function(g
                                         # Store remaining values needed for analysis
         Ds[i] <- D
         n_lowerstate[i] <- length(in_lowerstate)
-        sentinel_history[[i]] <- sentinels
+        sentinel_history[[i]] <- as.numeric(sentinels)
+        nodestate_history[[i]] <- as.numeric(in_lowerstate) 
         if(check_alts) {
-            random_history[[i]] <- random
-            if(!from_upper) largecorr_history[[i]] <- largecorrs
+            random_history[[i]] <- as.numeric(random)
+            if(!from_upper) largecorr_history[[i]] <- as.numeric(largecorrs)
         }
 
         ## Iterate
@@ -681,5 +727,17 @@ simulation <- function(g
     )
     df <- cbind(df, maxeig, maxsd, avgsd, maxac, avgac)
 
+    if(return_histories) {
+        histories <- list(
+            sentinels = sentinel_history,
+            ls_nodes = nodestate_history
+        )
+        if(check_alts) {
+            histories[["random"]] <- random_history
+            if(!from_upper) histories[["largecorr"]] <- largecorr_history
+        }
+        return(list(df = df, histories = histories))
+    }
+    
     return(df)
 }
