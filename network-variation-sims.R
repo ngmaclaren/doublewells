@@ -44,7 +44,7 @@ run_sim <- function(network, seed) {
     data(list = c(network))
     g <- get(network)
                                         # And run the simulation with default settings.
-    simulation(g)#, check_alts = TRUE)
+    simulation(g, assessment_samples = 1:10)#, check_alts = TRUE)
 }
 
                                         # Main loop

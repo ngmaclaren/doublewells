@@ -41,6 +41,12 @@ for(i in 1:length(examples_lower)) {
          xlab = expression(italic(D)), ylab = "% Nodes in Upper State", yaxt = "n",
          cex.lab = 1.75, cex.axis = 1.75)
     axis(side = 2, at = c(0, 50, 100), labels = c(0, 50, 100), cex.axis = 1.75)
+    cvs <- rev(find_critical_values(examples_lower[[i]]))
+    arrows(
+        x0 = cvs - .01, x1 = cvs,
+        y0 = df[df$Ds %in% cvs, "p_upperstate"] + 10, y1 = df[df$Ds %in% cvs, "p_upperstate"] + 1,
+        length = .1, angle = 20
+    )
     if(i == 1) {
         legend("topright", inset = c(0, -.15),
                ncol = 4, bty = "n",
@@ -212,33 +218,42 @@ if(save_plots) dev.off()
 
                                         # How does the τ compare for the different transitions (from
                                         # stable ranges)?
-df <- examples_lower[[2]]$df
-rdf <- df[, -c(grep("lowinput", colnames(df)))]
-kdat <- Kendall_correlations(rdf)$kendalls[
-                                    , c("avgac_all", "avgac_lower", "avgac_sentinel",
-                                        "n_steps", "n_lowerstate")
-                                  ]
-maxDs <- tapply(rdf$Ds, as.factor(rdf$n_lowerstate), max)
-maxDs <- data.frame(
-    n_lowerstate = as.numeric(names(maxDs)),
-    Ds = maxDs
-)
-kdat$Ds <- maxDs$Ds[match(kdat$n_lowerstate, maxDs$n_lowerstate)]
-
-matplot(kdat$Ds, kdat[, c("avgac_all", "avgac_lower", "avgac_sentinel")],
-        xlab = "D", ylab = expression(tau),
-        type = "o", pch = 1:3, lwd = 2, cex = rep(kdat$n_steps/15, each = 3), 
-        xlim = range(kdat$Ds), ylim = c(0.5, 1.0))
-
-plot(NULL, xlab = "D", ylab = expression(tau), xlim = range(kdat$Ds), ylim = c(0.5, 1.0),
-     main = "Power-law")
+### Figure ? (SI?)
 plotseries <- function(colname, pch) {
-    points(kdat$Ds, kdat[, colname], pch = pch, lwd = 2, cex = kdat$n_steps/15, col = pch)
-    lines(kdat$Ds, kdat[, colname], lty = pch, lwd = 2, col = pch)
+    points(kdat$Ds, kdat[, colname], pch = pch, lwd = 2, cex = 2, col = pch) # kdat$n_steps/15
+    lines(kdat$Ds, kdat[, colname], lty = 1, lwd = 2, col = pch)
 }
-plotseries("avgac_all", 1)
-plotseries("avgac_lower", 2)
-plotseries("avgac_sentinel", 3)
+
+ht <- 7; wd <- 14
+if(save_plots) {
+    pdf("./img/performance-stable-ranges.pdf", height = ht, width = wd)
+} else dev.new(height = ht, width = wd)
+par(mfrow = c(1, 2), mar = c(4, 4, 1, 1))
+for(i in 1:2) {
+    df <- examples_lower[[i]]$df
+    rdf <- df[, -c(grep("lowinput", colnames(df)))]
+    kdat <- Kendall_correlations(rdf)$kendalls[
+                                        , c("avgac_all", "avgac_lower", "avgac_sentinel",
+                                            "n_steps", "n_lowerstate")
+                                      ]
+    maxDs <- tapply(rdf$Ds, as.factor(rdf$n_lowerstate), max)
+    maxDs <- data.frame(
+        n_lowerstate = as.numeric(names(maxDs)),
+        Ds = maxDs
+    )
+    kdat$Ds <- maxDs$Ds[match(kdat$n_lowerstate, maxDs$n_lowerstate)]
+    actual <- sentinel_performance(examples_lower[[i]], tr_nodes = TRUE)
+    plot(NULL, xlab = "D", ylab = expression(tau), xlim = range(kdat$Ds), ylim = c(0.5, 1.0))
+    mtext(LETTERS[i], adj = 0.01, line = -1.5, cex = 1.5, font = 2)
+    plotseries("avgac_all", 1)
+    plotseries("avgac_lower", 2)
+    plotseries("avgac_sentinel", 3)
+    points(kdat$Ds, actual, pch = 4, lwd = 2, cex = 2, col = 4)
+    lines(kdat$Ds, actual, lty = 1, lwd = 2, cex = 2, col = 4)
+    legend("bottomleft", legend = c("All", "Lower State", "High Input", "Actual"), bty = "n",
+           col = 1:4, pch = 1:4, pt.lwd = 2)
+}
+if(save_plots) dev.off()
 
                                         # What proportion of sentinel nodes transition?
 sents <- examples_lower[[2]]$histories$sentinels
@@ -288,3 +303,66 @@ legend(
     legend = c("Power-law", "Dolphins"),
     col = c(1, 2), pt.lwd = 2,pch = c(1, 2)# lty = 1
 )
+
+
+### For /each/ transition, of the nodes that transition how many were selected as high input nodes?
+sentinel_performance <- function(dl, fromlower = TRUE) {
+    ""
+    df <- dl$df
+    
+    if(fromlower) {
+        critical_values <- tapply(df$Ds, df$n_lowerstate, max)
+    } else {
+        critical_values <- tapply(df$Ds, df$n_lowerstate, min)
+    }
+    
+    transition_points <- which(df$Ds %in% critical_values)
+
+    if(fromlower) {
+        sents <- dl$histories$sentinels[transition_points]
+    } else {
+        sents <- dl$histories$lowinput[transition_points]
+    }
+    
+    if(fromlower) {
+        nodes_before <- dl$histories$lowerstate_nodes[transition_points]
+        nodes_after <- dl$histories$lowerstate_nodes[transition_points + 1]
+    } else {
+        nodes_before <- dl$histories$upperstate_nodes[transition_points]
+        nodes_after <- dl$histories$upperstate_nodes[transition_points + 1]
+    }
+    
+    transitioning_nodes <- mapply(function(x, y) x[!(x %in% y)], nodes_before, nodes_after)
+    
+    mapply(
+        function(x, y) {
+            num <- sum(y %in% x)
+            poss <- length(x)
+            if(poss > 5) poss <- 5
+            num/poss
+        }, transitioning_nodes, sents
+    )
+}
+    
+    
+dl <- examples_upper[[2]]
+dl <- examples_lower[[2]]
+df <- dl$df
+critical_values <- tapply(df$Ds, df$n_lowerstate, max)#)[-1]
+transition_points <- which(df$Ds %in% critical_values)
+sents <- dl$histories$sentinels[transition_points] # +?
+nodes_before <- dl$histories$ls_nodes[transition_points]
+nodes_after <- dl$histories$ls_nodes[transition_points + 1]
+transitioning_nodes <- mapply(function(x, y) x[!(x %in% y)], nodes_before, nodes_after)
+                                        # of the nodes that transition, how many were sentinels
+mapply(
+    function(x, y) {
+        num <- sum(y %in% x)
+        poss <- length(x)
+        if(poss > 5) poss <- 5
+        num/poss
+        ##sum(y %in% x)/length(x)
+    }, transitioning_nodes, sents
+)
+
+lengths(transitioning_nodes)

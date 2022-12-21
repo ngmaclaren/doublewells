@@ -6,7 +6,7 @@ export(
     "sampled_eigenmethod", "sampled_sdmethod", "sampled_acmethod",
 
     ## Helper Functions
-    "get_gcc", "CVk", "Kendall_correlations",
+    "get_gcc", "CVk", "Kendall_correlations", "sentinel_performance",
 
     ## Algorithm Support Functions
     "choose_sentinels", "choose_lowrank", "choose_largecorr", "choose_largesd",
@@ -15,5 +15,6 @@ export(
     "upperstate", "lowerstate",
 
     ## Analysis
+    "find_critical_values", "find_n_nodes_tr", "est_degree", "counter", "mod_sp", "calc_results",
     "simulation"
 )

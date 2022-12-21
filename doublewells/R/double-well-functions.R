@@ -129,7 +129,7 @@ Kendall_correlations <- function(df, constrain = TRUE, cutoff = 15, check_alts =
                                  b_param = "Ds") {
     "This function relies on the exact output data frame of the `doublewells::simulation` function: it takes that data frame as input and returns a list with (1) a matrix of mean Kendall correlations, and (2) the standard deviation of those correlations. By default (`constrain = TRUE`) this function will only return computed mean/sd of correlations based on a 'sufficient' amount of data---that is, when the correlation was computed from at least `cutoff` pairs of values for D and the early warning indicator."
                                         # Select the columns with early warning indicator values
-    columns <- colnames(df)[!(colnames(df) %in% c("n_lowerstate", "Ds"))]
+    columns <- colnames(df)[!(colnames(df) %in% c("n_lowerstate", b_param))]
                                         # Split-Apply-Combine
                                         # SPLIT the data frame so that each grouping has the same
                                         # number of nodes in the lower state.
@@ -174,6 +174,91 @@ Kendall_correlations <- function(df, constrain = TRUE, cutoff = 15, check_alts =
                                         # unique values of D)
         kendalls = kendalls
     )
+    return(results)
+}
+
+sentinel_performance <- function(dl, fromlower = TRUE, tr_nodes = FALSE,
+                                 nodeset = NULL) {
+                                        # Requires the various "histories" lists available in the
+                                        # output of `simulation` when using `return_histories = TRUE`
+                                        # and, for `fromlower = FALSE`, `check_alts = TRUE`.
+                                        #
+                                        # 
+    df <- dl$df
+    
+    if(fromlower) {
+        critical_values <- rev(tapply(df$Ds, df$n_lowerstate, max))
+    } else {
+        critical_values <- tapply(df$Ds, df$n_lowerstate, min)
+    }
+    
+    transition_points <- which(df$Ds %in% critical_values)
+
+    if(is.null(nodeset)) {
+        if(fromlower) {
+            nodeset <- "sentinels"
+        } else {
+            nodeset <- "lowinput"
+        }
+    }
+    
+    sents <- dl$histories[[nodeset]][transition_points]
+    
+    ## if(fromlower) {
+    ##     sents <- dl$histories$sentinels[transition_points]
+    ## } else {
+    ##     sents <- dl$histories$lowinput[transition_points]
+    ## }
+    
+    if(fromlower) {
+        nodes_before <- dl$histories$lowerstate_nodes[transition_points]
+        nodes_after <- dl$histories$lowerstate_nodes[transition_points + 1]
+    } else {
+        nodes_before <- dl$histories$upperstate_nodes[transition_points]
+        nodes_after <- dl$histories$upperstate_nodes[transition_points + 1]
+    }
+
+    if(length(nodes_before) == 1) {
+        transitioning_nodes <- list()
+        transitioning_nodes[[1]] <- unlist(nodes_before)[
+            !(unlist(nodes_before) %in% unlist(nodes_after))
+        ]
+    } else {
+        transitioning_nodes <- mapply(function(x, y) x[!(x %in% y)], nodes_before, nodes_after)
+    }
+
+    if(isTRUE(tr_nodes)) {
+        dt <- 0.01
+        nsamples <- 240
+        sample_spacing <- .1/dt
+        samples <-  rev(
+            seq(from = nrow(dl$histories$X[[1]]), by = -sample_spacing, length.out = nsamples)
+        )
+
+        splitdf <- split(df, df$n_lowerstate)
+        results <- numeric()
+        for(i in 1:length(splitdf)) {
+            ##lapply(splitdf, function(rdf) {
+            rdf <- splitdf[[i]]
+            if(nrow(rdf) < 15) next
+            obs <- as.numeric(rownames(rdf))
+            Xs <- dl$histories$X[obs]
+            nodes <- rev(transitioning_nodes)[[i]]
+            acs <- lapply(Xs, function(x) sampled_acmethod(x[, nodes], samples, lag = 1))
+            avgac <- sapply(acs, mean)
+            results[i] <- cor(rdf$Ds, avgac, method = "kendall")
+        }
+        results <- na.omit(results)
+    } else {
+        results <- data.frame(
+            D_crit = critical_values,
+            n_before = lengths(nodes_before),
+            n_after = lengths(nodes_after),
+            n_tr = lengths(transitioning_nodes),
+            n_sents_tr = mapply(function(x, y) sum(y %in% x), transitioning_nodes, sents)
+        )
+    }
+
     return(results)
 }
 
@@ -312,17 +397,109 @@ calc_rho <- function(X, samples) {
     (maxs - mins)/means
 }
 
+find_critical_values <- function(dl, constrain = TRUE, cutoff = 15) {
+    df <- dl$df
+    dfsplit <- split(df, factor(df$n_lowerstate))
+    if(constrain) dfsplit <- dfsplit[which(sapply(dfsplit, nrow) >= cutoff)]
+    sapply(dfsplit, function(x) max(x$Ds))
+}
+
+find_n_nodes_tr <- function(cvs, dl) {
+    transition_points <- which(dl$df$Ds %in% cvs)
+    nodes_before <- dl$histories$lowerstate_nodes[transition_points]
+    nodes_after <- dl$histories$lowerstate_nodes[transition_points + 1]
+    return(lengths(nodes_before) - lengths(nodes_after))
+}
+
+est_degree <- function(dl, D) {
+    i <- which(dl$df$Ds == D)
+    X <- dl$histories$X[[i]]
+    rowSums(cor(X[samples, ], method = "pearson"))
+}
+
+counter <- function(df) ifelse(df$n_tr > df$n_sents_tr & df$n_sents_tr < 5, 1, 0)
+
+mod_sp <- function(simresults, nodeset = "sentinels", fromlower = TRUE) {
+    sp <- lapply(simresults, function(x) {
+        sentinel_performance(x, fromlower = fromlower, nodeset = nodeset)
+    })
+
+    for(i in 1:length(sp)) sp[[i]]$error <- counter(sp[[i]])
+
+    for(i in 1:length(sp)) sp[[i]]$p_error <- apply(sp[[i]], 1, function(row) {
+        if(row["error"] == 1) {
+            1 - row["n_sents_tr"]/min(row["n_tr"], 5)
+        } else {
+            0
+        }
+    })
+
+    for(i in 1:length(sp)) {
+        sp[[i]]$stable_range <- 0
+        for(j in 1:nrow(sp[[i]])) {
+            if(j == 1) {
+                sp[[i]]$stable_range[j] <- sp[[i]]$D_crit[j]
+            } else {
+                sp[[i]]$stable_range[j] <- sp[[i]]$D_crit[j] - sp[[i]]$D_crit[j-1]
+            }
+        }
+    }
+
+    return(sp)
+}
+
+calc_results <- function(simresults, fromlower = TRUE, nodeset = "sentinels") {
+    sp <- lapply(simresults, function(x) {
+        sentinel_performance(x, fromlower = fromlower, nodeset = nodeset)
+    })
+    results <- data.frame(net = names(simresults))
+    results$n_tr <- sapply(sp, nrow)
+    results$nnodes <- sapply(results$net, function(x) vcount(get(x)))
+    results$density <- sapply(results$net, function(x) edge_density(get(x)))
+    results$cv <- sapply(results$net, function(x) {
+        g <- get(x)
+        k <- degree(g)
+        mean(k)/sd(k)
+    })
+    results$errors <- sapply(sp, function(df) sum(counter(df)))
+    ## results$p_error <- apply(results, 1, function(row) {
+    ##     if(row["error"] == 1) {
+    ##         1 - row["n_sents_tr"]/min(row["n_tr"], 5)
+    ##     } else {
+    ##         0
+    ##     }
+    ## })
+    ## results$stable_range <- sapply(sp, function(df) {
+    ##     dcrit <- c(0, df$D_crit)
+    ##     dthis <- df$D_crit
+    ##     dlast <- dcrit[-length(dcrit)]
+    ##     dthis - dlast
+    ## })
+    results
+}
+
+
 simulation <- function(g
                                         # These defaults are set for consistent behavior across
                                         # simulations in this study.
+                                        # Default bifurcation parameter is D, the connection strength,
+                                        # but stress u may also be set.
+                     ,
+                       bifurcation_parameter = "D" # "u"
                                         # Evenly spaced double wells parameters
                      ,
                        r = c(1, 4, 7)
                                         # Start the bifurcation parameter at a small value.
                      ,
                        D.init = 0.01
+                                        # Default stress is no stress if bifurcating on u. If
+                                        # bifurcating on u, a reasonable value of D will also need to
+                                        # be set as D.init.
+                     ,
+                       u.init = 0.0
                                         # Stress vector, not used in the primary analysis so the
-                                        # default is set to zero
+                                        # default is set to zero. Use this argument if setting u but
+                                        # bifurcating on D.
                      ,
                        u = rep(0, vcount(g)) 
                                         # Add a small amount of noise
@@ -377,6 +554,8 @@ simulation <- function(g
                        from_upper = FALSE
                      ,
                        D.stop = NULL
+                     ,
+                       u.stop = NULL
                                         # Should Aparicio et al.'s ρ be returned instead of the normal
                                         # output?
                      , 
@@ -385,12 +564,23 @@ simulation <- function(g
                                         # returned in addition to the normal output?
                      ,
                        return_histories = FALSE
+                                        # Should the complete state history (X at each D) be returned?
+                     ,
+                       return_X = FALSE
                                         # Set this argument to a sequence e.g. 1:10 to take the first
                                         # 10 positions of the samples vector as the assessment
                                         # samples, reducing the amount of# information used to select
                                         # sentinel nodes.
                      ,
                        assessment_samples = NULL
+                                        # Set the below arguments to pass specific values of the
+                                        # bifurcation parameter to simulate.
+                     ,
+                       specific_values = FALSE
+                     ,
+                       Dvec = NULL
+                     ,
+                       uvec = NULL
                        ) {
     "This function simulates a multi-node double well system over increasing values of the connection strength, D, between nodes. It returns a data frame with the state of the system after each round of integration and the value of each early warning indicator in that iteration. The process takes some time, particularly for larger networks (max attempted has about 375 nodes)."
                                         # Calculate the cutoff value for what constitutes being in
@@ -403,14 +593,22 @@ simulation <- function(g
     if(check_alts | from_upper) {
         upper_state_cutoff <- optimize(dw, c(r[2], r[3]), r = r, maximum = TRUE)$maximum
     }
+                                        # If return_X, return_histories must also be true
+    if(return_X) return_histories <- TRUE
                                         # Record the total number of nodes in g for later use.
     nnodes <- vcount(g)
                                         # And make the adjacency matrix.
     A <- as_adj(g, type = "both", sparse = FALSE)
 
     ## Node Systems
-                                        # Set D
-    D <- D.init
+                                        # Set the initial bifurcation parameter.
+    if(specific_values) {
+        if(bifurcation_parameter == "D") D <- Dvec[1]
+        if(bifurcation_parameter == "u") u <- rep(uvec[1], vcount(g))
+    } else {
+        D <- D.init
+        if(bifurcation_parameter == "u") u <- rep(u.init, vcount(g))
+    }
 
     ## Sim Params
                                         # Rescale time-related variables. This is done so that the
@@ -444,6 +642,7 @@ simulation <- function(g
     ## Storage Vectors
     n_lowerstate <- numeric()
     Ds <- numeric()
+    if(bifurcation_parameter == "u") us <- numeric()
     maxeig <- list(all = numeric(), lower = numeric(), sentinel = numeric())
     maxsd <- list(all = numeric(), lower = numeric(), sentinel = numeric())
     avgsd <- list(all = numeric(), lower = numeric(), sentinel = numeric())
@@ -454,7 +653,12 @@ simulation <- function(g
                                         # option is required to return them, as it will change the
                                         # class of the output.
     sentinel_history <- list() 
-    nodestate_history <- list()
+    lowerstate_history <- list()
+    upperstate_history <- list()
+    largecorr_history <- list()
+    largesd_history <- list()
+    random_history <- list()
+    if(return_X) X_history <- list()
     if(check_equil) equils <- list()
 
                                         # If checking alternatives
@@ -500,13 +704,14 @@ simulation <- function(g
         }
         avgac$lowinput_sentinel <- numeric()
         random_history <- list()
-        if(!from_upper) {
-            largecorr_history <- list()
-            largesd_history <- list()
+        if(from_upper) {
+            lowinput_history <- list()
+            ##largecorr_history <- list()
+            ##largesd_history <- list()
         }
     }
 
-    if(calc_rho) rhos <- list()
+    if(isTRUE(calc_rho)) rhos <- list()
 
     ## Main Simulation Loop
     i <- 1
@@ -546,17 +751,20 @@ simulation <- function(g
                                         # lower state at equilibrium OR there are not enough lower
                                         # state nodes for the number of sentinels required.
         in_lowerstate <- V(g)[which(lowerstate(X[state_check, ], cutoff = state_cutoff) == 1)]
+        lowerstate_history[[i]] <- as.numeric(in_lowerstate)
         if(from_upper | check_alts) {
             in_upperstate <- V(g)[which(upperstate(X[state_check, ],
                                                    cutoff = upper_state_cutoff) == 1)]
+            upperstate_history[[i]] <- as.numeric(in_upperstate)
         }
         if(from_upper) {
             if(length(in_upperstate) <= node_cutoff) break
         } else {
             if(length(in_lowerstate) <= node_cutoff) break
         }
+        
 
-        if(calc_rho) rhos[[i]] <- calc_rho(X, samples)
+        if(isTRUE(calc_rho)) rhos[[i]] <- calc_rho(X, samples)
 
         ## Determine sentinels
                                         # Sentinels are chosen based on the average state of their
@@ -681,25 +889,59 @@ simulation <- function(g
         }
                                         # Store remaining values needed for analysis
         Ds[i] <- D
+        if(bifurcation_parameter == "u") us[i] <- max(u)
         n_lowerstate[i] <- length(in_lowerstate)
-        sentinel_history[[i]] <- as.numeric(sentinels)
-        nodestate_history[[i]] <- as.numeric(in_lowerstate) 
-        if(check_alts) {
-            random_history[[i]] <- as.numeric(random)
-            if(!from_upper) largecorr_history[[i]] <- as.numeric(largecorrs)
+        if(return_histories) {
+            sentinel_history[[i]] <- as.numeric(sentinels)
+            lowerstate_history[[i]] <- as.numeric(in_lowerstate)
+            if(from_upper | check_alts) upperstate_history[[i]] <- as.numeric(in_upperstate)
+            if(check_alts) {
+                random_history[[i]] <- as.numeric(random)
+                if(from_upper) {
+                    lowinput_history[[i]] <- as.numeric(lowinput_sentinels)
+                } else {
+                    largecorr_history[[i]] <- as.numeric(largecorrs)
+                    largesd_history[[i]] <- as.numeric(largesds)
+                }
+            }
+            if(return_X) X_history[[i]] <- X
         }
 
         ## Iterate
-        D <- D + stepsize
         i <- i + 1
+        
+        if(bifurcation_parameter == "D") {
+            if(specific_values) {
+                if(i > length(Dvec)) break else D <- Dvec[i]
+            } else {
+                D <- D + stepsize
+            }
+        } else if(bifurcation_parameter == "u") {
+            if(specific_values) {
+                if(i > length(uvec)) break else u <- rep(uvec[i], vcount(g))
+            } else {
+                u <- u + stepsize
+            }
+        }
+            
 
-        if(i %% 10 == 0) print(D)
+        if(i %% 10 == 0) {
+            if(bifurcation_parameter == "D") {
+                print(D)
+            } else if(bifurcation_parameter == "u") {
+                print(max(u))
+            }
+        }
 
         ## Stopping criteria for from_upper
         if(from_upper) {
             if(!is.null(D.stop)) {
                 if(D <= D.stop) break
             } else if(D <= 0) break
+
+            if(!is.null(u.stop)) {
+                if(max(u) <= u.stop) break
+            }
         }
     }
 
@@ -715,7 +957,7 @@ simulation <- function(g
     avgac <- do.call(cbind, avgac)
     colnames(avgac) <- paste("avgac", colnames(avgac), sep = "_")
 
-    if(calc_rho) {
+    if(isTRUE(calc_rho)) {
         rho <- do.call(rbind, rhos)
         ##rho$D <- Ds
         return(rho)
@@ -726,15 +968,23 @@ simulation <- function(g
         Ds = Ds
     )
     df <- cbind(df, maxeig, maxsd, avgsd, maxac, avgac)
+    if(bifurcation_parameter == "u") df <- cbind(df, us)
 
     if(return_histories) {
         histories <- list(
             sentinels = sentinel_history,
-            ls_nodes = nodestate_history
-        )
+            lowerstate_nodes = lowerstate_history
+            )
+        if(return_X) histories[["X"]] <- X_history
+        if(from_upper | check_alts) histories[["upperstate_nodes"]] <- upperstate_history
         if(check_alts) {
             histories[["random"]] <- random_history
-            if(!from_upper) histories[["largecorr"]] <- largecorr_history
+            if(from_upper) {
+                histories[["lowinput"]] <- lowinput_history
+            } else {
+                histories[["largecorr"]] <- largecorr_history
+                histories[["largesd"]] <- largesd_history
+            }
         }
         return(list(df = df, histories = histories))
     }
