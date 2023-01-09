@@ -4,7 +4,7 @@ library(igraph)
 library(doublewells)
 
 save_plots <- TRUE # FALSE
-run_sims <- TRUE # FALSE
+run_sims <- FALSE # TRUE
 filename <- "./data/parameter-variation-results-r1.rda"
 
 choices <- c("powerlaw", "dolphins")
@@ -97,22 +97,23 @@ filenames <- paste0("./img/param-variation-", saveorder, ".pdf")
 for(i in 1:n.param) {
     imgfile <- filenames[i]
     if(save_plots) {
-        pdf(imgfile, height = ht, width = wd)
+        cairo_pdf(imgfile, height = ht, width = wd, family = "Bitstream Vera Sans")
     } else dev.new(height = ht, width = wd)
-    par(mfrow = c(3, 1), mar = c(4, 7, 0, 2) + 0.3, xpd = TRUE) # 6.1
+    par(mfrow = c(3, 1), mar = c(4, 8, 0, 2) + 0.5, xpd = TRUE) # 6.1
     yticklabels <- c("Dom. Eig.", "Max. SD", "Avg. SD", "Max. AC", "Avg. AC")
     ylim <- c(0.5, length(signals) + 0.5)
     xlim <- c(-1, 1)
     for(j in 1:length.each) {
         idx <- (i - 1)*length.each + j
         dl <- results[[idx]]
-        plot(NULL, xlab = expression(italic(tau)), ylab = "", yaxt = "n", ylim = ylim, xlim = xlim,
-             bty = "n", cex.lab = 2.5, cex.axis = 2.5)
-        mtext(LETTERS[j], font = 2, line = -1.4, adj = -0.06, cex = 1.75)
+        plot(NULL, xlab = "", ylab = "", yaxt = "n", ylim = ylim, xlim = xlim,
+             bty = "n", cex.axis = 2.5)
+        title(xlab = "τ", cex.lab = 2.5, font.lab = 3)
+        mtext(LETTERS[j], font = 2, line = -3, adj = -0.06, cex = 3)
         axis(side = 2, at = 5:1, labels = yticklabels, tick = FALSE, las = 1,
              cex.lab = 1.75, cex.axis = 1.75)
-        text(x = -1, y = c(5.25, 4.75), labels = c("Power-Law Network", "Dolphin Network"),
-             adj = c(0, .5), col = "black", font = 3, cex = 1.5)
+        text(x = -1, y = c(5.25, 4.75), labels = c("Power-law network", "Dolphin network"),
+             adj = c(0, .5), col = "black", cex = 1.5)
         segments(y0 = 1:4 + .5, x0 = -1, x1 = 1, lty = 1, lwd = .5, col = "gray")
         segments(x0 = c(-.5, 0, .5), y0 = .5, y1 = length(signals) + .5,
                  lty = 2, lwd = .5, col = "gray")
@@ -142,52 +143,3 @@ for(i in 1:n.param) {
     }
     if(save_plots) dev.off()
 }
-
-### Uncomment below to generate each subfigure as a separate plot
-## nodesets <- c("all", "lower", "sentinel", "upper", "lowrank", "antisentinel", "altsentinel")
-## signals <- c("maxeig", "maxsd", "avgsd", "maxac", "avgac")
-## pch <- colors <- 1:length(nodesets)
-## pt.lwd <- 3
-## pt.cex <- 3
-## adjust <- c(0.25, -0.25)
-## ht <- 7
-## wd <- 14#7
-## saveorder <- c("s", "M", "r", "TU")
-## filenames <- as.character(t(outer(saveorder, 1:length.each, FUN = paste, sep = "-")))
-## for(i in 1:length(results)) {
-##     dl <- results[[i]]
-##     imgfile <- paste0("./img/param-variation-", filenames[i], ".pdf")
-##     if(save_plots) {
-##         pdf(imgfile, height = ht, width = wd)
-##     } else dev.new(height = ht, width = wd)
-##     par(mar = c(4, 7, 0, 6.1) + 0.3, xpd = TRUE)
-##     yticklabels <- c("Dom. Eig.", "Max. SD", "Avg. SD", "Max. AC", "Avg. AC")
-##     ylim <- c(0.5, length(signals) + 0.5)
-##     xlim <- c(-1, 1)
-##     plot(NULL, xlab = expression(italic(tau)), ylab = "", yaxt = "n", ylim = ylim, xlim = xlim,
-##          bty = "n", cex.lab = 1.75, cex.axis = 1.75)
-##     axis(side = 2, at = 5:1, labels = yticklabels, tick = FALSE, las = 1, cex.lab = 1.75, cex.axis = 1.75)
-##     text(x = -1, y = c(5.25, 4.75), labels = c("BA", "Dolphins"), adj = c(0, .5), col = "black", font = 3)
-##     legend("bottomright", inset = c(-.1, 0), cex = 1.25,
-##            legend = c("All", "Lower State", "Sentinel", "Upper State", "Low Rank", "Random", "Alternate"),
-##            pch = pch, col = colors, pt.cex = pt.cex*.75, pt.lwd = pt.lwd*.75,
-##            bty = "n")
-##     segments(y0 = 1:4 + .5, x0 = -1, x1 = 1, lty = 1, lwd = .5, col = "gray")
-##     segments(x0 = c(-.5, 0, .5), y0 = .5, y1 = length(signals) + .5, lty = 2, lwd = .5, col = "gray")
-##     for(j in 1:length(dl)) {
-##         df <- dl[[j]]
-##         rdf <- df[, -c(grep("revdir", colnames(df)))]
-##         dat <- as.data.frame(Kendall_correlations(rdf)$means)
-##         dat$fullname <- rownames(dat)
-##         dat <- cbind(dat, do.call(rbind, strsplit(dat$fullname, "_")))
-##         dat <- dat[, -grep("fullname", colnames(dat))]
-##         colnames(dat) <- c("tau", "signal", "set")
-##         rownames(dat) <- NULL
-##         dat$signal <- factor(dat$signal, levels = rev(signals))
-##         dat$set <- factor(dat$set, levels = nodesets)
-##         dat$signal_ <- as.numeric(dat$signal) + adjust[j]
-##         dat$set_ <- as.numeric(dat$set)
-##         points(signal_ ~ tau, data = dat, col = dat$set_, pch = dat$set_, lwd = pt.lwd, cex = pt.cex)
-##     }
-##     if(save_plots) dev.off()
-## }

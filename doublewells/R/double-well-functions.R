@@ -229,7 +229,7 @@ sentinel_performance <- function(dl, fromlower = TRUE, tr_nodes = FALSE,
 
     if(isTRUE(tr_nodes)) {
         dt <- 0.01
-        nsamples <- 240
+        nsamples <- 250
         sample_spacing <- .1/dt
         samples <-  rev(
             seq(from = nrow(dl$histories$X[[1]]), by = -sample_spacing, length.out = nsamples)
@@ -397,11 +397,12 @@ calc_rho <- function(X, samples) {
     (maxs - mins)/means
 }
 
-find_critical_values <- function(dl, constrain = TRUE, cutoff = 15) {
+find_critical_values <- function(dl, constrain = TRUE, cutoff = 15, bifurcation_parameter = "D") {
     df <- dl$df
     dfsplit <- split(df, factor(df$n_lowerstate))
     if(constrain) dfsplit <- dfsplit[which(sapply(dfsplit, nrow) >= cutoff)]
-    sapply(dfsplit, function(x) max(x$Ds))
+    if(bifurcation_parameter == "D") col <- "Ds" else if(bifurcation_parameter == "u") col <- "us"
+    sapply(dfsplit, function(x) max(x[, col]))
 }
 
 find_n_nodes_tr <- function(cvs, dl) {
@@ -630,7 +631,7 @@ simulation <- function(g
         e_samples <- samples
     } else {
         a_samples <- samples[assessment_samples]
-        e_samples <- samples[-assessment_samples]
+        e_samples <- samples#samples[-assessment_samples]
     }
                                         # All x_i are initially set to 1 (lower) or 7 (upper)
     if(from_upper) {

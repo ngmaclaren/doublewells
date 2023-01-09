@@ -2,6 +2,7 @@
 
 library(igraph)
 library(doublewells)
+library(nlme)
 
 save_plots <- FALSE # TRUE
 palette("R4")
@@ -14,7 +15,7 @@ networks <- networks[-which(networks %in% c("powerlaw", "dolphins"))]
 
 load("./data/allnets-lower-r1.rda")
 
-names(allnets_lower) <- names(allnets_upper) <- networks
+names(allnets_lower) <- networks
 
 load("./data/examples-lower-r1.rda")
 
@@ -22,13 +23,14 @@ allnets_lower[["powerlaw"]] <- examples_lower[[1]]
 allnets_lower[["dolphins"]] <- examples_lower[[2]]
 networks <- c(networks, "powerlaw", "dolphins")
 data(list = networks)
-samples <- rev(seq(from = 75/.01, by = -.1/.01, length.out = 240))
+samples <- rev(seq(from = 75/.01, by = -.1/.01, length.out = 250))
 
 all_cvs <- lapply(allnets_lower, function(dl) rev(find_critical_values(dl)))
 
-## applied to the above list, conduct the simulations at just those values of D, returning all histories (including X, which is what I need).
-## Requires modification to `simulation` to allow passing specified values of D.
-
+                                        # applied to the above list, conduct the simulations at just
+                                        # those values of D, returning all histories (including X).
+                                        # Requires modification to `simulation` to allow passing
+                                        # specified values of D.
 simresults <- list()
 for(i in seq_along(all_cvs)) {
     g <- get(networks[i])
@@ -40,8 +42,6 @@ for(i in seq_along(all_cvs)) {
 }
 names(simresults) <- networks
 
-## need: pl_kcs, pl_rs
-## need a big palette (with at least 23 colors)
 kcs <- list()
 rs <- list()
 for(i in seq_along(all_cvs)) {
@@ -54,10 +54,6 @@ for(i in seq_along(all_cvs)) {
 names(kcs) <- networks
 names(rs) <- networks
 
-## cor(unlist(kcs), unlist(rs))
-## model <- lm(unlist(rs) ~ unlist(kcs))
-
-library(nlme)
 
 y <- unlist(kcs)
 x <- unlist(rs)
@@ -68,24 +64,27 @@ lsm <- lm(y ~ x)
 
 ht <- 7; wd <- 7
 if(save_plots) {
-    cairo_pdf("./img/est-degree-correlations2.pdf", height = ht, width = wd)
+    cairo_pdf(
+        "./img/est-degree-correlations2.pdf", height = ht, width = wd, family = "Bitstream Vera Sans"
+    )
 } else dev.new(height = ht, width = wd)
-par(mar = c(4, 4, 1, 1))
-plot(NULL, xlim = c(-.25, 1), ylim = c(-.25, 1), ylab = "Large Corr (τ)", xlab = "ρ(k, k')")
+par(mar = c(4, 4, 1, 1) + .4)
+plot(
+    NULL, xlim = c(-.2, 1), ylim = c(-.2, 1), ylab = "Large Corr (τ)", xlab = "ρ(k, k')",
+    cex.lab = 1.75, cex.axis = 1.75
+)
 abline(v = 0, lwd = .5); abline(h = 0, lwd = .5)
 for(i in seq_along(all_cvs[-which(names(all_cvs) %in% c("powerlaw", "dolphins"))]))
     points(rs[[i]], kcs[[i]], col = 1, pch = 19, cex = 1.5)
 points(rs[["powerlaw"]], kcs[["powerlaw"]], pch = 19, col = 3, cex = 1.5)
 points(rs[["dolphins"]], kcs[["dolphins"]], pch = 19, col = 4, cex = 1.5)
-## lines(unlist(kcs), predict(model), col = "black")
 lines(x, predict(lsm), col = 2, lwd = 2)
-## lines(x, predict(vm), col = 2, lwd = 2)
 text(
-    .6, .1, col = 2,
+    .6, .1, col = 2, cex = 1.5,
     paste0("y = ", round(coefficients(lsm)[1], 3), " + ", round(coefficients(lsm)[2], 3), "x")
 )
 legend(
-    "bottomrigh", bty = "n", col = c(3, 4, 1), pch = 19,
-    legend = c("Power-Law", "Dolphins", "Other Networks")
+    "bottomrigh", bty = "n", col = c(3, 4, 1), pch = 19, cex = 1.25,
+    legend = c("Power-law", "Dolphin", "Other networks") #
 )
 if(save_plots) dev.off()

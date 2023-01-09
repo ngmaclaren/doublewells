@@ -6,8 +6,8 @@ library(igraph)
 library(doublewells)
 
                                         # Should the output be saved?
-save_results <- TRUE # FALSE
-save_plots <- FALSE # TRUE
+save_results <- FALSE # TRUE
+save_plots <- TRUE # FALSE
 
                                         # Which networks should be analyzed?
                                         # This is the same list as that in network-variation-sims.R
@@ -119,19 +119,19 @@ rdf <- rdf[rdf$network %in% selected_networks, ]
                                         # runs.
 
                                         # The model for the maximum eigenvalue indicator...
-maxeig <- lme(tau ~ nodeset, random = ~ 1 | network,#/run,#/nodeset,
+maxeig <- lme(tau ~ nodeset, random = ~ 1 | network,
               data = rdf, subset = ewi == "maxeig")
                                         # the maximum standard deviation...
-maxsd <- lme(tau ~ nodeset, random = ~ 1 | network,#/run,#/nodeset,
+maxsd <- lme(tau ~ nodeset, random = ~ 1 | network,
              data = rdf, subset = ewi == "maxsd")
                                         # average standard deviation...
-avgsd <- lme(tau ~ nodeset, random = ~ 1 | network,#/run,#/nodeset,
+avgsd <- lme(tau ~ nodeset, random = ~ 1 | network,
              data = rdf, subset = ewi == "avgsd")
                                         # maximum autocorrelation
-maxac <- lme(tau ~ nodeset, random = ~ 1 | network,#/run,#/nodeset,
+maxac <- lme(tau ~ nodeset, random = ~ 1 | network,
              data = rdf, subset = ewi == "maxac")
                                         # and for the average autocorrelation coefficient.
-avgac <- lme(tau ~ nodeset, random = ~ 1 | network,#/run,#/nodeset,
+avgac <- lme(tau ~ nodeset, random = ~ 1 | network,
              data = rdf, subset = ewi == "avgac")
 
                                         # If saving results, open the connection
@@ -165,7 +165,6 @@ get_values <- function(model) {
     uppers[2:3] <- ests[1] + uppers[2:3]
 
     df <- as.data.frame(t(rbind(lowers, ests, uppers)))
-    ## df <- df[c(2, 1, 3), ] # needed if lower is the ref in the model
     colnames(df) <- c("lower", "est", "upper")
     rownames(df) <- c("all", "lower", "sentinel")
     df
@@ -193,7 +192,7 @@ plotvals$set <- factor(plotvals$set, levels = nodesets)
 plotvals$signal_ <- rev(as.numeric(plotvals$signal))
 plotvals$set_ <- as.numeric(plotvals$set)
 
-palette("R4")#conference val: "Tableau 10")
+palette("R4")
 
                                         # This block makes the ladder plot based on the calculated
                                         # values from get_values().
@@ -210,19 +209,17 @@ if(plot_errorbars) {
     pchcex <- 2; pchs <- 1:3; lwd <- 3#4
 }
 if(save_plots) {
-    pdf("./img/kendall-corr-figure.pdf", width = wd, height = ht)
-    ##pdf("./complex-networks-2022/LatexAbstractTemplate/conference-kendall-fig.pdf",
-      ##  width = wd, height = ht)
+    cairo_pdf("./img/kendall-corr-figure.pdf", width = wd, height = ht, family = "Bitsream Vera Sans")
 } else dev.new(width = wd, height = ht)
 par(mar = c(5, 8, 0, 1) + 0.1)
 ylims <- range(plotvals$signal_) + c(-.33, .33)
 xlims <- c(.6, .9)
-plot(NULL, ylim = ylims, xlim = xlims, #xlim = c(min(lowers)*.9, max(uppers)*1.1),
-     ylab = "", xlab = expression(tau), yaxt = "n", bty = "n",
+plot(NULL, ylim = ylims, xlim = xlims,
+     ylab = "", xlab = "", yaxt = "n", bty = "n",
      cex.lab = 1.75, cex.axis = 1.75)
+title(xlab = "τ", cex.lab = 1.75, cex.axis = 1.75, font.lab = 3)
 axis(side = 2, tick = FALSE, labels = yticklabels, at = max(plotvals$signal_):1, las = 1,
      cex.axis = 1.75)
-##ypos <- 2 + c((1/3), 0, -(1/3))
 if(plot_errorbars) {
     points(adjust ~ est, data = plotvals, pch = pchs, lwd = lwd, col = plotvals$set_, cex = pchcex)
     segments(x0 = plotvals$lower, x1 = plotvals$upper, y0 = plotvals$adjust,

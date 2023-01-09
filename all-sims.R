@@ -16,15 +16,11 @@ networks <- c(
     empiricals
 )
 networks <- networks[-which(networks %in% c("powerlaw", "dolphins"))]
-## data(list = networks)
 
 outfile_lower <- "./data/allnets-lower-r1.rda"
 outfile_upper <- "./data/allnets-upper-r1.rda"
 
 nthreads <- detectCores() - 1
-
-## allnets_lower <- list()
-## allnets_upper <- list()
 
 threads <- makeCluster(nthreads)
 clusterExport(threads, varlist = list("networks"))
@@ -37,7 +33,7 @@ allnets_lower <- clusterApply(
         data(list = networks)
         set.seed(123)
         g <- get(x)
-        simulation(g, check_alts = TRUE, return_histories = TRUE, assessment_samples = 1:10)
+        simulation(g, check_alts = TRUE, return_histories = TRUE)#, assessment_samples = 1:10)
     }
 )
 
@@ -51,31 +47,11 @@ allnets_upper <- clusterApply(
         g <- get(x)
         simulation(
             g, from_upper = TRUE, D.init = 1, D.stop = 0, stepsize = -5e-3,
-            u = rep(-15, vcount(g)), check_alts = TRUE, return_histories = TRUE,
-            assessment_samples = 1:10
+            u = rep(-15, vcount(g)), check_alts = TRUE, return_histories = TRUE
+            ## , assessment_samples = 1:10
         )}
 )
-        
-
-## for(i in 1:length(networks)) {
-##     print(paste("Network:", networks[i]))
-
-##     g <- get(networks[i])
-
-##     print("From lower state...")
-##     allnets_lower[[i]] <- simulation(
-##         g, check_alts = TRUE, return_histories = TRUE, assessment_samples = 1:10
-##     )
-
-##     print("From upper state...")
-##     allnets_upper[[i]] <- simulation(
-##         g, from_upper = TRUE, D.init = 1, D.stop = 0, stepsize = -5e-3, u = rep(-15, vcount(g)),
-##         check_alts = TRUE, return_histories = TRUE, assessment_samples = 1:10
-##     )
-## }
-
 save(allnets_lower, file = outfile_lower)
 save(allnets_upper, file = outfile_upper)
 
 stopCluster(threads)
-##test <- simulation(tortoises, return_histories = TRUE)
