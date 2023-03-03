@@ -3,8 +3,8 @@
 library(igraph)
 library(doublewells)
 
-save_plots <- TRUE # FALSE
-run_sims <- FALSE # TRUE
+save_plots <- FALSE # TRUE
+run_sims <- TRUE # FALSE
 filename <- "./data/parameter-variation-results-r1.rda"
 
 choices <- c("powerlaw", "dolphins")
@@ -35,7 +35,8 @@ if(run_sims) {
         results[[i]] <- vector(mode = "list", length = length(choices))
         for(j in 1:length(choices)) {
             g <- get(choices[j])
-            results[[i]][[j]] <- simulation(g, s = intensities[i], check_alts = TRUE, TU = 50, assessment_samples = 1:10)
+            results[[i]][[j]] <- simulation(g, s = intensities[i], check_alts = TRUE,
+                                            assessment_samples = 1:10)
         }
     }
 
@@ -47,7 +48,7 @@ if(run_sims) {
         for(j in 1:length(choices)) {
             g <- get(choices[j])
             results[[i + adjust]][[j]] <- simulation(g, nsamples = sample_sizes[i],
-                                                        check_alts = TRUE, TU = 50, assessment_samples = 1:10)
+                                                        check_alts = TRUE, assessment_samples = 1:10)
         }
     }
 
@@ -58,7 +59,8 @@ if(run_sims) {
         results[[i + adjust]] <- vector(mode = "list", length = length(choices))
         for(j in 1:length(choices)) {
             g <- get(choices[j])
-            results[[i + adjust]][[j]] <- simulation(g, r = rs[[i]], check_alts = TRUE, assessment_samples = 1:10)
+            results[[i + adjust]][[j]] <- simulation(g, r = rs[[i]], check_alts = TRUE,
+                                                     assessment_samples = 1:10)
         }
     }
 
@@ -69,7 +71,8 @@ if(run_sims) {
         results[[i + adjust]] <- vector(mode = "list", length = length(choices))
         for(j in 1:length(choices)) {
             g <- get(choices[j])
-            results[[i + adjust]][[j]] <- simulation(g, TU = TUs[i], check_alts = TRUE, assessment_samples = 1:10)
+            results[[i + adjust]][[j]] <- simulation(g, TU = TUs[i], check_alts = TRUE,
+                                                     assessment_samples = 1:10)
         }
     }
 
